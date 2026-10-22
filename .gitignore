@@ -1,0 +1,35 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Build-артефакты модуля app (156 МБ)
+app/build/
+build/
+
+# Svitgrid decompiled (чужой код, не выгружать)
+_svitgrid_decompile/
+apks_unzipped/
+base_unzipped/
+jadx_output/
+jadx_base/
+*.apks
+*.apk
+*.dex
+*.so
+assets/svitgrid.ver.1.0.242.build.300/
+assets/svitgrid-icons/
+
+# Локальные bat и логи
+build-logs/
+build_now.bat
+wait_dev.bat
+check_log.bat
+shot_fc.bat
+get_kt_sizes.bat
