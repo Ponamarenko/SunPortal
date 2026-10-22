@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.sunportal.model.LiveData
+import app.sunportal.model.WeatherCodes
 import app.sunportal.ui.components.LottieArt
 import app.sunportal.ui.components.LottieArtView
 import app.sunportal.ui.theme.BatteryColor
@@ -353,14 +354,8 @@ fun FlowScheme(
             color = LoadColor
         )
 
-        // Иконка погоды над домом (ШАГ 3): emoji по current.code
-        val weatherIconStr = when (weatherCode) {
-            0, 1 -> "☀️"
-            2, 3 -> "☁️"
-            in 51..67 -> "🌧"
-            in 71..100 -> "❄️"
-            else -> ""
-        }
+        // Иконка погоды над домом: emoji по WMO-коду (тот же набор, что и в карточке)
+        val weatherIconStr = if (weatherCode != null) WeatherCodes.icon(weatherCode) else ""
         if (weatherIconStr.isNotEmpty()) {
             Box(
                 modifier = Modifier

@@ -12,11 +12,15 @@ import app.sunportal.data.WEATHER_SOURCE_SERVER
 import app.sunportal.model.OpenMeteoResponse
 import app.sunportal.model.WeatherData
 import app.sunportal.model.toWeatherData
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+
+/** Период автообновления погоды, мс (10 минут). */
+private const val WEATHER_REFRESH_MS = 10L * 60L * 1000L
 
 data class WeatherUiState(
     val loading: Boolean = false,
@@ -46,6 +50,17 @@ class WeatherViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         load()
+        startAutoRefresh()
+    }
+
+    /** Автообновление погоды каждые 10 минут (данные сервера обновляются редко). */
+    private fun startAutoRefresh() {
+        viewModelScope.launch {
+            while (true) {
+                delay(WEATHER_REFRESH_MS)
+                load()
+            }
+        }
     }
 
     /** Загрузить погоду согласно выбранному в настройках источнику. */
