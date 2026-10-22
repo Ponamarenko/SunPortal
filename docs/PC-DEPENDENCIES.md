@@ -297,6 +297,39 @@ Test-Path app\build\outputs\apk\debug\app-debug.apk   # должно быть Tr
 
 ---
 
+## 10. Чек-лист пересборки после правок с телефона
+
+Правки делаются на телефоне в коде → коммит + push в `main`. Дальше на ПК:
+
+```bat
+cd C:\Users\xAnder\AndroidProjects\SunPortal
+git pull origin main
+build_now.bat clean assembleDebug
+adb install -r app\build\outputs\apk\debug\app-debug.apk
+```
+
+Актуальные задачи на пересборку — в Issues: <https://github.com/Ponamarenko/SunPortal/issues>
+(последняя: **#3** — новая схема потоков: крупные иконки, тонкие линии, дом по погоде).
+
+Порядок релиза (если нужна новая версия):
+
+```powershell
+# 1) в app/build.gradle.kts поднять versionCode / versionName
+# 2) пересобрать
+build_now.bat clean assembleDebug
+# 3) выпустить
+gh release create vX.Y.Z app\build\outputs\apk\debug\app-debug.apk --title "vX.Y.Z" --notes "..." --latest
+```
+
+Откат, если новая сборка не зашла:
+
+```bat
+git revert <commit>            :: мягкий откат коммита
+git reset --hard 0960295       :: жёсткий откат к рабочей v1.0.4
+```
+
+---
+
 ## Полезные ссылки
 
 - Android Studio — <https://developer.android.com/studio>
