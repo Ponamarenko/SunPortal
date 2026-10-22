@@ -24,6 +24,7 @@ import app.sunportal.ui.live.LiveScreen
 import app.sunportal.ui.live.LiveTopBar
 import app.sunportal.ui.navigation.tabGroups
 import app.sunportal.ui.navigation.tabs
+import app.sunportal.ui.notifications.AlertsWatcher
 import app.sunportal.ui.overview.OverviewScreen
 import app.sunportal.ui.panels.PanelsScreen
 import app.sunportal.ui.settings.SettingsScreen
@@ -146,6 +147,8 @@ fun MainScreen() {
             }
         ) { padding ->
             Box(modifier = Modifier.padding(padding)) {
+                // Уведомления об отключениях (работает на любой вкладке)
+                AlertsWatcher()
                 when (selectedTab) {
                     0 -> LiveScreen()
                     1 -> OverviewScreen()
