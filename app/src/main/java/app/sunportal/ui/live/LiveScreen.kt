@@ -105,11 +105,24 @@ fun LiveTopBar(onMenu: () -> Unit) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = "Щойно",
-                            fontSize = 11.sp,
-                            color = LabelGray
-                        )
+                        // возраст данных: «Щойно» / «5 хв тому» / «2 год тому»
+                        val ageMin = remember(liveState.cachedAt) {
+                            if (liveState.cachedAt <= 0L) -1L
+                            else (System.currentTimeMillis() - liveState.cachedAt) / 60000L
+                        }
+                        val ageText = when {
+                            ageMin < 0 -> ""
+                            ageMin < 1 -> "Щойно"
+                            ageMin < 60 -> "$ageMin хв тому"
+                            else -> "${ageMin / 60} год тому"
+                        }
+                        if (ageText.isNotEmpty()) {
+                            Text(
+                                text = ageText,
+                                fontSize = 11.sp,
+                                color = LabelGray
+                            )
+                        }
                     }
                 }
                 if (liveState.offline) {
