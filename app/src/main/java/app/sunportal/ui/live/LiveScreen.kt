@@ -1,6 +1,8 @@
 package app.sunportal.ui.live
 
 import android.app.Activity
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -115,7 +117,19 @@ fun LiveTopBar(onMenu: () -> Unit) {
             }
         },
         actions = {
-            IconButton(onClick = { /* колокольчик: іконка сповіщень */ }) {
+            // Колокольчик → настройки уведомлений приложения (канал «Сповіщення станції»)
+            IconButton(onClick = {
+                val ctx = view.context
+                try {
+                    ctx.startActivity(
+                        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                            putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName)
+                        }
+                    )
+                } catch (e: Exception) {
+                    // на части прошивок экран настроек уведомлений недоступен — молча игнорируем
+                }
+            }) {
                 Icon(Icons.Default.Notifications, contentDescription = "Сповіщення")
             }
             IconButton(onClick = {
