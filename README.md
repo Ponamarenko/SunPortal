@@ -37,6 +37,15 @@ APK: `app\build\outputs\apk\debug\app-debug.apk`.
 > Build-Tools, Platform-Tools, Git, GitHub CLI, установка APK на телефон, релиз):
 > **[`docs/PC-DEPENDENCIES.md`](docs/PC-DEPENDENCIES.md)**
 
+## Сборка без ПК
+
+* ☁️ **GitHub Actions** — пуш с телефона → APK собирается в облаке → готовый файл
+  скачивается как артефакт. Тег `vX.Y.Z` дополнительно создаёт релиз.
+* 📱 **Termux прямо на телефоне** — полная сборка на устройстве (JDK 17 + Android SDK 36
+  + aapt2/zipalign для ARM).
+
+> Инструкция: **[`docs/PHONE-BUILD.md`](docs/PHONE-BUILD.md)**
+
 ## Структура
 
 ```
@@ -151,6 +160,7 @@ SOC берётся из live-данных (`LiveViewModel`, общий опро�
 
 - `docs/lottie-svitgrid.md` — список Lottie-ассетов и как их использовать.
 - `docs/PC-DEPENDENCIES.md` — установка зависимостей на ПК (Windows 11) и сборка/релиз.
+- `docs/PHONE-BUILD.md` — сборка без ПК: GitHub Actions (облако) и Termux (на телефоне).
 - `AGENTS.md` — правила работы с репозиторием (git-синхронизация, сборка, релиз).
 
 ## Лицензия ассетов
