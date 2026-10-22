@@ -33,6 +33,10 @@ build_now.bat clean assembleDebug   ;; полная пересборка
 Скрипт выставляет `JAVA_HOME=C:\Users\xAnder\.jdks\jbr-21.0.11` (JDK 21).
 APK: `app\build\outputs\apk\debug\app-debug.apk`.
 
+> Полная инструкция по установке зависимостей на Windows 11 (JDK 21, Android SDK 34/36,
+> Build-Tools, Platform-Tools, Git, GitHub CLI, установка APK на телефон, релиз):
+> **[`docs/PC-DEPENDENCIES.md`](docs/PC-DEPENDENCIES.md)**
+
 ## Структура
 
 ```
@@ -141,6 +145,7 @@ SOC берётся из live-данных (`LiveViewModel`, общий опро�
 ## Документация
 
 - `docs/lottie-svitgrid.md` — список Lottie-ассетов и как их использовать.
+- `docs/PC-DEPENDENCIES.md` — установка зависимостей на ПК (Windows 11) и сборка/релиз.
 - `AGENTS.md` — правила работы с репозиторием (git-синхронизация, сборка, релиз).
 
 ## Лицензия ассетов

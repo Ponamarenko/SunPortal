@@ -119,6 +119,9 @@ git status
 
 ## СБОРКА (Windows)
 
+Инструкция по установке всех зависимостей (JDK 21, Android SDK 34/36, Build-Tools,
+Platform-Tools, Git, GitHub CLI) и сборка/релиз: `docs/PC-DEPENDENCIES.md`.
+
 Gradle не стартует из-под PowerShell без явного `JAVA_HOME`. Используй `build_now.bat` в корне проекта:
 
 ```bat
