@@ -33,6 +33,9 @@ class LiveViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = SettingsRepository(app)
     private val gson = Gson()
 
+    /** true — приложение на экране (опрос 5 с), false — в фоне (опрос 60 с). */
+    private var foreground = true
+
     private val _uiState = MutableStateFlow(LiveUiState())
     val uiState: StateFlow<LiveUiState> = _uiState.asStateFlow()
 
@@ -74,10 +77,20 @@ class LiveViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Переключить частоту опроса: пока приложение на экране — раз в 5 с,
+     * в фоне — раз в минуту (меньше расход батареи и нагрузка на сервер).
+     */
+    fun setForeground(value: Boolean) {
+        if (foreground == value) return
+        foreground = value
+        if (value) loadData()
+    }
+
     private fun startAutoRefresh() {
         viewModelScope.launch {
             while (true) {
-                kotlinx.coroutines.delay(5000)
+                kotlinx.coroutines.delay(if (foreground) 5000L else 60000L)
                 loadData()
             }
         }

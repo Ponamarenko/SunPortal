@@ -13,8 +13,12 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.viewmodel.compose.viewModel
 import app.sunportal.data.SettingsRepository
 import app.sunportal.ui.about.AboutScreen
 import app.sunportal.ui.battery.BatteryScreen
@@ -22,6 +26,7 @@ import app.sunportal.ui.charts.ChartsScreen
 import app.sunportal.ui.forecast.ForecastScreen
 import app.sunportal.ui.live.LiveScreen
 import app.sunportal.ui.live.LiveTopBar
+import app.sunportal.ui.live.LiveViewModel
 import app.sunportal.ui.navigation.tabGroups
 import app.sunportal.ui.navigation.tabs
 import app.sunportal.ui.notifications.AlertsWatcher
@@ -149,6 +154,8 @@ fun MainScreen() {
             Box(modifier = Modifier.padding(padding)) {
                 // Уведомления об отключениях (работает на любой вкладке)
                 AlertsWatcher()
+                // Частый опрос сервера только пока приложение на экране
+                LivePollingLifecycle(viewModel())
                 when (selectedTab) {
                     0 -> LiveScreen()
                     1 -> OverviewScreen()
@@ -163,5 +170,25 @@ fun MainScreen() {
                 }
             }
         }
+    }
+}
+
+/**
+ * Следит за жизненным циклом Activity: пока приложение на экране — опрос сервера
+ * раз в 5 с, в фоне — раз в минуту (экономия батареи).
+ */
+@Composable
+private fun LivePollingLifecycle(liveVm: LiveViewModel) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START -> liveVm.setForeground(true)
+                Lifecycle.Event.ON_STOP -> liveVm.setForeground(false)
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 }
