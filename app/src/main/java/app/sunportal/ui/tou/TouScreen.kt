@@ -1,5 +1,7 @@
 package app.sunportal.ui.tou
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,9 +25,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.sunportal.ui.common.LabelGray
 import app.sunportal.ui.common.SvitScreenBg
 import app.sunportal.ui.common.SvitgridCard
+import app.sunportal.ui.forecast.ForecastViewModel
+import app.sunportal.ui.overview.BlackoutViewModel
 import app.sunportal.ui.theme.GridColor
 import app.sunportal.ui.theme.JetBrainsMono
 import app.sunportal.ui.theme.PVColor
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 private data class SlotEdit(
     val index: Int,
@@ -42,9 +48,16 @@ private data class SlotEdit(
  * шрифт JetBrains Mono, слоты — отдельные карточки.
  */
 @OptIn(ExperimentalLayoutApi::class)
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun TouScreen(vm: TouViewModel = viewModel()) {
+fun TouScreen(
+    vm: TouViewModel = viewModel(),
+    bvm: BlackoutViewModel = viewModel(),
+    fvm: ForecastViewModel = viewModel()
+) {
     val state by vm.uiState.collectAsState()
+    val bstate by bvm.state.collectAsState()
+    val fstate by fvm.state.collectAsState()
     var status by remember { mutableStateOf("") }
 
     Column(
@@ -250,7 +263,56 @@ fun TouScreen(vm: TouViewModel = viewModel()) {
                 )
             }
 
-            // --- ПРЕСЕТЫ ---
+            // --- ПРЕСЕТИ (локальні шаблони: сервер підтримує лише читання TOU) ---
+            val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+            val blackoutWindows = remember(bstate.data) {
+                bstate.data?.schedule
+                    ?.find { it.date == today }
+                    ?.slots
+                    ?.map { toMinutes(it.start.take(5)) to toMinutes(it.end.take(5)) }
+                    ?: emptyList()
+            }
+            val forecastHours = fstate.data?.hours.orEmpty()
+
+            fun applyPreset(name: String) {
+                slotEdits.forEachIndexed { i, edit ->
+                    val endTime = slotEdits.getOrNull(i + 1)?.time ?: slotEdits.first().time
+                    val sMin = toMinutes(edit.time)
+                    var eMin = toMinutes(endTime)
+                    if (eMin <= sMin) eMin += 1440
+                    val inBlackout = blackoutWindows.any { (bs, be) ->
+                        var b2 = be
+                        if (b2 <= bs) b2 += 1440
+                        sMin < b2 && bs < eMin
+                    }
+                    val isDay = sMin < 20 * 60 && eMin > 6 * 60
+                    val updated = when (name) {
+                        // Під час відключень — не заряджати (беремо резерв), вночі — заряд від мережі
+                        "Blackout" -> if (inBlackout)
+                            edit.copy(power = "0", soc = "100", grid = false, gen = false)
+                        else
+                            edit.copy(power = "12000", soc = "100", grid = true, gen = false)
+                        // Денні слоти — заряд потужністю з прогнозу, нічні — від мережі
+                        "Від прогнозу" -> {
+                            var pvW = 0f
+                            forecastHours.forEach { h ->
+                                var hm = h.hour * 60
+                                if (hm < sMin) hm += 1440
+                                if (hm >= sMin && hm < eMin) pvW += h.predicted_kwh * 1000f
+                            }
+                            if (isDay)
+                                edit.copy(power = pvW.toInt().coerceAtLeast(0).toString(), soc = "100", grid = false, gen = false)
+                            else
+                                edit.copy(power = "12000", soc = "100", grid = true, gen = false)
+                        }
+                        "Ніч" -> edit.copy(power = "12000", soc = "100", grid = true, gen = false)
+                        else -> edit.copy(power = "12000", soc = "80", grid = false, gen = true)
+                    }
+                    slotEdits[i] = updated
+                }
+                status = "Пресет «$name» заповнено локально (сервер не підтримує запис TOU)"
+            }
+
             Text(
                 text = "Пресети:",
                 fontSize = 13.sp,
@@ -259,15 +321,22 @@ fun TouScreen(vm: TouViewModel = viewModel()) {
                 fontFamily = JetBrainsMono
             )
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("Blackout", "Від прогнозу", "Зима", "Весна", "Літо", "Осінь").forEach { preset ->
+                listOf("Blackout", "Від прогнозу", "Ніч", "День").forEach { preset ->
                     SvitButton(
                         text = preset,
                         highlighted = false,
                         textSize = 12,
-                        onClick = { status = "Пресет «$preset» вибрано (збереження ще не реалізовано)" }
+                        onClick = { applyPreset(preset) }
                     )
                 }
             }
+            Text(
+                text = "⚠️ Сервер підтримує лише читання розкладу — пресети заповнюють таблицю локально.",
+                fontSize = 11.sp,
+                lineHeight = 14.sp,
+                color = LabelGray,
+                fontFamily = JetBrainsMono
+            )
         }
     }
 }
@@ -343,4 +412,12 @@ private fun SvitButton(
             maxLines = 1
         )
     }
+}
+
+/** "HH:MM" → хвилини від початку доби (для порівняння інтервалів). */
+private fun toMinutes(time: String): Int {
+    val parts = time.split(":")
+    val h = parts.getOrNull(0)?.trim()?.toIntOrNull() ?: 0
+    val m = parts.getOrNull(1)?.trim()?.toIntOrNull() ?: 0
+    return h * 60 + m
 }
