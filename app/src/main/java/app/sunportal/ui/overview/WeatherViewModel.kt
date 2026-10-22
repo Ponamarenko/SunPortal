@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import app.sunportal.api.OpenMeteoClient
 import app.sunportal.api.RetrofitClient
 import app.sunportal.data.SettingsRepository
+import app.sunportal.data.WEATHER_SOURCE_AUTO
 import app.sunportal.data.WEATHER_SOURCE_OPEN_METEO
 import app.sunportal.data.WEATHER_SOURCE_SERVER
 import app.sunportal.model.OpenMeteoResponse

@@ -57,7 +57,7 @@ fun TouScreen(
 ) {
     val state by vm.uiState.collectAsState()
     val bstate by bvm.state.collectAsState()
-    val fstate by fvm.state.collectAsState()
+    val fstate by fvm.uiState.collectAsState()
     var status by remember { mutableStateOf("") }
 
     Column(

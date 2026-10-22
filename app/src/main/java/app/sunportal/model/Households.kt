@@ -4,7 +4,7 @@ import androidx.annotation.DrawableRes
 import app.sunportal.R
 
 /**
- * Тип домовладіння — изометрические иконки Svitgrid (assets/art/households/*.png
+ * Тип домовладіння — изометрические иконки Svitgrid (assets/art/households/, PNG
  * из их APK, продублированы в res/drawable-nodpi/svit_household_*.png).
  *
  * Выбирается в настройках и показывается в узле «Дім» на схеме потоков.
