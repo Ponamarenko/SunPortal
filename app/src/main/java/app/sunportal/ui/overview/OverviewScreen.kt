@@ -66,7 +66,9 @@ fun OverviewScreen(
                     FlowScheme(
                         d = d,
                         modifier = Modifier.fillMaxSize(),
-                        compact = true
+                        compact = true,
+                        // Дом на схеме отражает погоду (дождь/снег/солнце)
+                        weatherCode = wstate.data?.current?.code
                     )
                 }
             }

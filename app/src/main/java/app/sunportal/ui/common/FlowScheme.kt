@@ -33,6 +33,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.sunportal.R
 import app.sunportal.model.LiveData
+import app.sunportal.ui.components.LottieArt
+import app.sunportal.ui.components.LottieArtView
 import app.sunportal.ui.theme.BatteryColor
 import app.sunportal.ui.theme.GridColor
 import app.sunportal.ui.theme.JetBrainsMono
@@ -347,6 +349,7 @@ fun FlowScheme(
                 .offset(x = homeX - 55.dp, y = homeNodeTop),
             columnWidth = 110.dp,
             lottieRes = if (isDay) R.raw.home_sun else R.raw.home_night,
+            lottieArt = houseArtFor(weatherCode, isDay),
             lottieSize = nodeSize,
             valueText = "${loadPower.toInt()} Вт",
             subText = null,
@@ -546,13 +549,11 @@ private fun PvBlock(
                             lineHeight = 11.sp,
                             fontFamily = JetBrainsMono
                         )
-                        val comp by rememberLottieComposition(
-                            LottieCompositionSpec.RawRes(if (isDay) R.raw.solar else R.raw.solar_night)
-                        )
-                        LottieAnimation(
-                            composition = comp,
-                            iterations = LottieConstants.IterateForever,
-                            modifier = Modifier.size(panelSize)
+                        // Панель: чем больше выработка PV — тем быстрее анимация
+                        LottieArtView(
+                            art = if (isDay) LottieArt.SOLAR else LottieArt.SOLAR_NIGHT,
+                            size = panelSize,
+                            speed = if (total > 0f) 1f else 0.15f
                         )
                         // Под панелью: «PV1 · 0,6»
                         Text(
@@ -744,11 +745,26 @@ private fun GridPoleIcon(size: Dp) {
     }
 }
 
+/**
+ * Анимация дома по погоде (WMO-код) и времени суток.
+ * Варианты из assets/lottie: солнце / дождь / снег (+ ночные версии).
+ */
+private fun houseArtFor(weatherCode: Int?, isDay: Boolean): LottieArt =
+    when (weatherCode ?: -1) {
+        in 51..67, in 80..82, in 95..99 ->
+            if (isDay) LottieArt.HOME_RAIN else LottieArt.HOME_RAIN_NIGHT
+        in 71..77, in 85..86 ->
+            if (isDay) LottieArt.HOME_SNOW else LottieArt.HOME_SNOW_NIGHT
+        else ->
+            if (isDay) LottieArt.HOME_SUN else LottieArt.HOME_NIGHT
+    }
+
 @Composable
 private fun SchemeNode(
     modifier: Modifier = Modifier,
     columnWidth: Dp,
     lottieRes: Int,
+    lottieArt: LottieArt? = null,
     customIcon: (@Composable () -> Unit)? = null,
     lottieSize: Dp,
     valueText: String?,
@@ -775,6 +791,12 @@ private fun SchemeNode(
             ) {
                 customIcon()
             }
+        } else if (lottieArt != null) {
+            // Анимация из assets/lottie (с погодными вариантами дома)
+            LottieArtView(
+                art = lottieArt,
+                size = lottieSize
+            )
         } else {
             val comp by rememberLottieComposition(LottieCompositionSpec.RawRes(lottieRes))
             LottieAnimation(
