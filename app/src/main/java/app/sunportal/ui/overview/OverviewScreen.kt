@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.sunportal.data.WEATHER_SOURCE_OPEN_METEO
 import app.sunportal.ui.common.FlowScheme
+import app.sunportal.ui.live.LiveViewModel
 import app.sunportal.ui.common.LabelGray
 import app.sunportal.ui.common.SvitScreenBg
 import app.sunportal.ui.common.SvitgridCard
@@ -32,7 +33,8 @@ import java.time.format.DateTimeFormatter
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun OverviewScreen(
-    vm: OverviewViewModel = viewModel(),
+    // Тот же ViewModel, что и на HOME — один опрос сервера на всё приложение
+    vm: LiveViewModel = viewModel(),
     bvm: BlackoutViewModel = viewModel(),
     wvm: WeatherViewModel = viewModel()
 ) {
@@ -57,8 +59,8 @@ fun OverviewScreen(
                 .weight(1f)
         ) {
             when {
-                state.loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                state.error != null -> Text(
+                state.loading && state.data == null -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                state.error != null && state.data == null -> Text(
                     text = "Помилка: ${state.error}",
                     color = Color.Red,
                     modifier = Modifier.align(Alignment.Center)
@@ -72,6 +74,17 @@ fun OverviewScreen(
                         weatherCode = wstate.data?.current?.code
                     )
                 }
+            }
+            // Сервер недоступен — показаны последние сохранённые данные
+            if (state.offline) {
+                Text(
+                    text = "⚠️ Немає зв'язку — останні дані",
+                    fontSize = 10.sp,
+                    lineHeight = 12.sp,
+                    color = Color(0xFFFFA726),
+                    fontFamily = JetBrainsMono,
+                    modifier = Modifier.align(Alignment.TopStart)
+                )
             }
         }
 
