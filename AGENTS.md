@@ -1,76 +1,91 @@
 # AGENTS.md — SunPortal
 
-## ПРАВИЛО: после ЛЮБЫХ изменений в проекте SunPortal (код, ресурсы, конфиги) — обязательно синхронизировать с GitHub.
+# Правило: Git-синхронизация + GitHub Release после каждой задачи
 
 Репозиторий: https://github.com/Ponamarenko/SunPortal
 Локально: `C:\Users\xAnder\AndroidProjects\SunPortal`
 Ветка: `main` · Remote: `origin` (HTTPS)
 
-### 1. ПРОВЕРКА ИЗМЕНЕНИЙ
+## Когда выполнять
+
+После ЛЮБОЙ задачи (редизайн, фикс, новая фича), после правки `.gitignore`, после добавления/удаления файлов, в конце сессии.
+
+## Алгоритм (6 шагов)
+
+### 1. Проверка
 
 ```bat
-cd C:\Users\xAnder\AndroidProjects\SunPortal
 git status
 ```
 
-### 2. ЕСЛИ ЕСТЬ ИЗМЕНЕНИЯ (modified / new / deleted) — ДОБАВИТЬ
+### 2. Добавить
 
 ```bat
 git add -A
 ```
 
-ВАЖНО: `.gitignore` уже исключает:
+Проверить, что в индексе нет чужого кода (`_svitgrid_decompile`, `assets/svitgrid.*`, `build/`, `build-logs/`, `*.apk`, `*.dex`, `*.so`, локальные `.bat`).
 
-- `_svitgrid_decompile/`, `apks_unzipped/`, `base_unzipped/`, `jadx_output/`, `jadx_base/`
-- `assets/svitgrid.ver.*`, `assets/svitgrid-icons/` — чужой код Svitgrid
-- `app/build/`, `build/`, `build-logs/`
-- `build_now.bat`, `wait_dev.bat`, `check_log.bat`, `shot_fc.bat`, `get_kt_sizes.bat`
-- `*.apk`, `*.apks`, `*.dex`, `*.so`
-- `.gradle/`, `/local.properties`, `/.idea`, `.cxx/`
-
-### 3. ПРОВЕРИТЬ, ЧТО НЕТ ЧУЖОГО КОДА
-
-```bat
-git status
-```
-
-Убедиться, что в списке только `app/`, `gradle/`, `*.kts`, `gradlew`, `gradlew.bat`, `screenshots/`, `assets/icon_new.png`.
-`assets/svitgrid.*` и `_svitgrid_decompile/` в списке быть НЕ должно.
-
-### 4. КОММИТ (с осмысленным сообщением)
+### 3. Коммит
 
 ```bat
 git commit -m "Task: <краткое описание> — <что изменено>"
 ```
 
-Примеры:
+Пример: `Task: TOU Svitgrid redesign — SvitgridCard, JetBrains Mono`
 
-- `Task: Tariffs redesign — SvitgridCard, JetBrains Mono, calculator`
-- `Fix: Forecast Післязавтра color GridColor → BatteryColor`
-- `Feature: Weather card on Overview`
-
-### 5. PUSH В GITHUB
+### 4. Push
 
 ```bat
 git push origin main
 ```
 
-Если ошибка `non-fast-forward` (кто-то изменил remote):
+Если `non-fast-forward`:
 
 ```bat
 git pull --rebase origin main
 git push origin main
 ```
 
-Если ошибка `rejected` и уверен, что локальная версия правильная:
+Если `rejected` (уверен, что локальная версия правильная):
 
 ```bat
 git push --force origin main
 ```
 
-(осторожно: перезапишет remote)
+### 5. GitHub Release (если была пересборка APK)
 
-### 6. ПРОВЕРКА
+**5.1. Поднять версию в `app/build.gradle.kts`:**
+
+```kotlin
+versionCode = <текущий + 1>
+versionName = "1.0.1" → "1.0.2"   // или следующая
+```
+
+**5.2. Пересобрать APK:**
+
+```bat
+.\gradlew.bat --no-daemon clean assembleDebug
+```
+
+**5.3. Создать Release:**
+
+```bat
+gh release create vX.Y.Z app\build\outputs\apk\debug\app-debug.apk ^
+  --title "vX.Y.Z — <краткое описание>" ^
+  --notes "<что изменено>" ^
+  --latest
+```
+
+**5.4. Проверить:**
+
+```bat
+gh release view vX.Y.Z
+```
+
+Ссылка: https://github.com/Ponamarenko/SunPortal/releases/tag/vX.Y.Z
+
+### 6. Проверка
 
 ```bat
 git log --oneline -3
@@ -79,38 +94,28 @@ git status
 
 Ожидание: `Your branch is up to date with 'origin/main'` и `nothing to commit, working tree clean`.
 
-## КОГДА ВЫПОЛНЯТЬ
+## Чего не делать
 
-- После ЛЮБОЙ задачи (редизайн экрана, фикс, новая фича).
-- После изменения `.gitignore`.
-- После добавления/удаления файлов.
-- В конце сессии — даже если изменений не было, проверить `git status`.
-
-## ЧЕГО НЕ ДЕЛАТЬ
-
-- НЕ выгружать `_svitgrid_decompile/` и `assets/svitgrid.*` (чужой код).
-- НЕ выгружать `build/`, `build-logs/`, `*.apk`, `*.dex`, `*.so`.
-- НЕ выгружать локальные `.bat` (`build_now.bat`, `wait_dev.bat`).
-- НЕ делать `git add .` без проверки — может затянуть чужой код, если `.gitignore` не сработал.
+- НЕ выгружать `_svitgrid_decompile/`, `assets/svitgrid.*`, `build/`, `build-logs/`, `*.apk`, `*.dex`, `*.so`, локальные `.bat`.
+- НЕ делать `git add .` без проверки (может затянуть чужой код).
 - НЕ делать `git push --force` без необходимости.
 
-## ОТЧЁТ (в конце задачи)
+## Формат отчёта (в конце задачи)
 
 Добавить раздел **«Git-синхронизация»**:
 
 - `git status` (до add): какие файлы изменены.
-- `git commit`: сообщение коммита + хеш.
+- `git commit`: сообщение + хеш.
 - `git push`: успех / ошибка.
 - `git log --oneline -3`: последние 3 коммита.
+- GitHub Release: тег, ссылка.
 - Ссылка: https://github.com/Ponamarenko/SunPortal
 
-## ЕСЛИ ТЕЛЕФОН ОТКЛЮЧЁН
+## Если телефон отключён
 
-Если задача включает установку APK / скриншот, но телефон не подключён:
-
-1. Сначала сделать git-синхронизацию (код готов — коммит/push).
-2. Потом сообщить: «телефон не подключён, установка/скриншот отложены».
-3. Когда телефон подключится — доделать установку и скриншот, потом снова `git push` (если менялся код) или просто подтвердить «up to date».
+- Сначала git-синхронизация (код готов — коммит/push).
+- Потом сообщить «телефон не подключён, установка/скриншот отложены».
+- Когда телефон подключится — доделать установку, скриншот, GitHub Release.
 
 ## СБОРКА (Windows)
 
@@ -122,8 +127,15 @@ C:\Users\xAnder\AndroidProjects\SunPortal\build_now.bat
 
 Он выставляет `JAVA_HOME=C:\Users\xAnder\.jdks\jbr-21.0.11` (JDK 21) и запускает `.\gradlew.bat --no-daemon assembleDebug`.
 
+Для `clean assembleDebug` — тот же bat с заменой задачи на `clean assembleDebug`.
+
 ## ОТЛАДКА ADB
 
 - `timeout /t N` не работает при перенаправлении stdin — используй `ping -n N 127.0.0.1 > nul` вместо пауз.
 - `findstr /C:"device"` матчит и слово «devices» в заголовке — для проверки подключения используй `findstr /R /C:"device$"`.
 - `git check-ignore -v` возвращает 0 и для негативного паттерна (`!имя`) — проверяй фактическое состояние через `git status --ignored`.
+
+## ВЕРСИИ ПРИЛОЖЕНИЯ
+
+Текущая: `versionCode = 3`, `versionName = "1.0.2"` (после bump от 1.0.1).
+Версия поднимается при каждой пересборке с новым функционалом; GitHub Release создаётся по тегу `vX.Y.Z`.
