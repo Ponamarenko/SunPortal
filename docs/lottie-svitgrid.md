@@ -3,7 +3,7 @@
 Извлечены из `svitgrid.ver.1.0.242.build.300.apks` → `assets/flutter_assets/assets/lottie/`.
 Формат: **bodymovin 5.12.2**, совместим с `lottie-compose` для Android.
 
-Файлы лежат в `app/src/main/assets/lottie/` (22 шт., 2.4 МБ).
+Файлы лежат в `app/src/main/assets/lottie/` (21 шт., 2.4 МБ).
 Компонент доступа — `app/src/main/java/app/sunportal/ui/components/LottieArt.kt`.
 
 > Документ вынесен из `assets/`, чтобы README не попадал в APK.
@@ -63,8 +63,8 @@ implementation("com.airbnb.android:lottie-compose:6.4.0")
 
 ## Примечание
 
-- `test_minimal.json` — служебный, можно удалить.
-- Часть анимаций (`solar`, `solar_night`, `home_sun`, `home_night`, `battery`, `inverter`)
-  продублирована в `app/src/main/res/raw/` — там же на них ссылается `FlowScheme.kt`.
-  Дубли в `assets/lottie/` оставлены, чтобы `LottieArt` был рабочим для всех значений enum.
+- `test_minimal.json` — служебный, удалён 22.10.
+- Раньше 6 анимаций (`solar`, `solar_night`, `home_sun`, `home_night`, `battery`, `inverter`)
+  дублировались в `app/src/main/res/raw/`. 22.10 дубли удалены — все анимации грузятся
+  из `assets/lottie/` через `LottieArt` (экономит ~330 КБ в APK).
 - Файлы — художественная графика svitgrid; при публикации в маркет проверьте лицензию оригинала.

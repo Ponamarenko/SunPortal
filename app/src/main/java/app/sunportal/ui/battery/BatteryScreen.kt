@@ -13,21 +13,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import app.sunportal.R
 import app.sunportal.ui.common.LabelGray
 import app.sunportal.ui.common.SvitCardGradient
 import app.sunportal.ui.common.SvitScreenBg
 import app.sunportal.ui.common.SvitgridCard
+import app.sunportal.ui.components.LottieArt
+import app.sunportal.ui.components.LottieArtView
 import app.sunportal.ui.live.LiveViewModel
-import com.airbnb.lottie.compose.LottieAnimation
-import com.airbnb.lottie.compose.LottieCompositionSpec
-import com.airbnb.lottie.compose.LottieConstants
-import com.airbnb.lottie.compose.rememberLottieComposition
 import app.sunportal.ui.theme.JetBrainsMono
 
 @Composable
@@ -64,12 +60,7 @@ fun BatteryScreen(vm: LiveViewModel = viewModel()) {
                 .size(200.dp),
             contentAlignment = Alignment.Center
         ) {
-            val batteryComp by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.battery))
-            LottieAnimation(
-                composition = batteryComp,
-                iterations = LottieConstants.IterateForever,
-                modifier = Modifier.size(200.dp)
-            )
+            LottieArtView(art = LottieArt.BATTERY, size = 200.dp)
             Column(
                 modifier = Modifier
                     .fillMaxSize()

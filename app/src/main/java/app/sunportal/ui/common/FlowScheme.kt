@@ -31,7 +31,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import app.sunportal.R
 import app.sunportal.model.LiveData
 import app.sunportal.ui.components.LottieArt
 import app.sunportal.ui.components.LottieArtView
@@ -40,10 +39,6 @@ import app.sunportal.ui.theme.GridColor
 import app.sunportal.ui.theme.JetBrainsMono
 import app.sunportal.ui.theme.LoadColor
 import app.sunportal.ui.theme.PVColor
-import com.airbnb.lottie.compose.LottieAnimation
-import com.airbnb.lottie.compose.LottieCompositionSpec
-import com.airbnb.lottie.compose.LottieConstants
-import com.airbnb.lottie.compose.rememberLottieComposition
 import java.time.LocalTime
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -288,14 +283,10 @@ fun FlowScheme(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .offset(x = invX - invSize * 0.5f, y = invY - invSize * 0.5f)
-                .size(invSize)
+                .size(invSize),
+            contentAlignment = Alignment.Center
         ) {
-            val comp by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.inverter))
-            LottieAnimation(
-                composition = comp,
-                iterations = LottieConstants.IterateForever,
-                modifier = Modifier.fillMaxSize()
-            )
+            LottieArtView(art = LottieArt.INVERTER, size = invSize)
         }
 
         // Батарея слева
@@ -304,7 +295,7 @@ fun FlowScheme(
                 .align(Alignment.TopStart)
                 .offset(x = battX - 55.dp, y = battY - nodeSize * 0.5f),
             columnWidth = 110.dp,
-            lottieRes = R.raw.battery,
+            lottieArt = LottieArt.BATTERY,
             lottieSize = nodeSize,
             valueText = "${battPower.toInt()} Вт",
             subText = buildBatterySub(d.batt_soc, d.battery_voltage),
@@ -320,14 +311,13 @@ fun FlowScheme(
             color = BatteryColor
         )
 
-        // Сеть справа — иконка столба, при p_grid = 0: "OFF" + "Вимк."
+        // Сеть справа — трансформатор svitgrid (столб), при p_grid = 0: "OFF" + "Вимк."
         SchemeNode(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .offset(x = gridX - 45.dp, y = gridY - nodeSize * 0.5f),
             columnWidth = 90.dp,
-            lottieRes = R.raw.inverter,
-            customIcon = { GridPoleIcon(nodeSize) },
+            lottieArt = if (isDay) LottieArt.TRANSFORMER else LottieArt.TRANSFORMER_NIGHT,
             lottieSize = nodeSize,
             valueText = "${gridPower.toInt()} Вт",
             subText = null,
@@ -348,7 +338,6 @@ fun FlowScheme(
                 .align(Alignment.TopStart)
                 .offset(x = homeX - 55.dp, y = homeNodeTop),
             columnWidth = 110.dp,
-            lottieRes = if (isDay) R.raw.home_sun else R.raw.home_night,
             lottieArt = houseArtFor(weatherCode, isDay),
             lottieSize = nodeSize,
             valueText = "${loadPower.toInt()} Вт",
@@ -396,7 +385,7 @@ fun FlowScheme(
                     .align(Alignment.TopStart)
                     .offset(x = genX - 48.dp, y = genY - smallNodeSize * 0.5f),
                 columnWidth = 96.dp,
-                lottieRes = R.raw.inverter,
+                lottieArt = LottieArt.GENERATOR,
                 lottieSize = smallNodeSize,
                 valueText = "${genPower.toInt()} Вт",
                 subText = null,
@@ -419,7 +408,7 @@ fun FlowScheme(
                     .align(Alignment.TopStart)
                     .offset(x = smartX - 48.dp, y = smartY - smallNodeSize * 0.5f),
                 columnWidth = 96.dp,
-                lottieRes = R.raw.home_night,
+                lottieArt = LottieArt.SMART_LOAD,
                 lottieSize = smallNodeSize,
                 valueText = "${smartPower.toInt()} Вт",
                 subText = null,
@@ -693,59 +682,6 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFlowArrowAt(
 }
 
 /**
- * Иконка столба городской сети (Canvas):
- * вертикальный столб → 2 перекладины → 4 изолятора (кружки) → провода
- * (2 свисающих в стороны + 1 провисший по нижней перекладине). Цвет #DDDDDD.
- */
-@Composable
-private fun GridPoleIcon(size: Dp) {
-    val poleColor = Color(0xFFDDDDDD)
-    Canvas(modifier = Modifier.size(size)) {
-        val w = this.size.width
-        val h = this.size.height
-        val bar = 2.dp.toPx()       // толщина столба и перекладин
-        val wireW = 1.5.dp.toPx()   // провода — самые тонкие
-        val insR = 2.5.dp.toPx()    // изоляторы (кружки)
-
-        // --- вертикальный столб ---
-        drawLine(poleColor, Offset(w * 0.50f, h * 0.96f), Offset(w * 0.50f, h * 0.10f), bar)
-
-        // --- 2 горизонтальные перекладины (нижняя длиннее) ---
-        val bar1Y = h * 0.44f
-        val bar2Y = h * 0.22f
-        drawLine(poleColor, Offset(w * 0.14f, bar1Y), Offset(w * 0.86f, bar1Y), bar)
-        drawLine(poleColor, Offset(w * 0.22f, bar2Y), Offset(w * 0.78f, bar2Y), bar)
-
-        // --- 4 маленьких изолятора на концах перекладин ---
-        val insColor = Color(0xFFF2F2F2)
-        listOf(
-            Offset(w * 0.18f, bar1Y), Offset(w * 0.82f, bar1Y),
-            Offset(w * 0.26f, bar2Y), Offset(w * 0.74f, bar2Y)
-        ).forEach { drawCircle(insColor, insR, it) }
-
-        // --- провода: 2 свисающих в стороны + 1 провисший между нижними изоляторами ---
-        val wire = poleColor.copy(alpha = 0.80f)
-        val wires = listOf(
-            Path().apply {
-                moveTo(w * 0.26f, bar2Y)
-                quadraticBezierTo(w * 0.09f, bar2Y + h * 0.06f, 0f, bar2Y + h * 0.10f)
-            },
-            Path().apply {
-                moveTo(w * 0.74f, bar2Y)
-                quadraticBezierTo(w * 0.91f, bar2Y + h * 0.06f, w, bar2Y + h * 0.10f)
-            },
-            Path().apply {
-                moveTo(w * 0.18f, bar1Y)
-                quadraticBezierTo(w * 0.50f, bar1Y + h * 0.14f, w * 0.82f, bar1Y)
-            }
-        )
-        wires.forEach {
-            drawPath(it, color = wire, style = Stroke(width = wireW, cap = StrokeCap.Round))
-        }
-    }
-}
-
-/**
  * Анимация дома по погоде (WMO-код) и времени суток.
  * Варианты из assets/lottie: солнце / дождь / снег (+ ночные версии).
  */
@@ -763,9 +699,7 @@ private fun houseArtFor(weatherCode: Int?, isDay: Boolean): LottieArt =
 private fun SchemeNode(
     modifier: Modifier = Modifier,
     columnWidth: Dp,
-    lottieRes: Int,
     lottieArt: LottieArt? = null,
-    customIcon: (@Composable () -> Unit)? = null,
     lottieSize: Dp,
     valueText: String?,
     subText: String?,
@@ -784,26 +718,15 @@ private fun SchemeNode(
         modifier = modifier.width(columnWidth),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        if (customIcon != null) {
-            Box(
-                modifier = Modifier.size(lottieSize),
-                contentAlignment = Alignment.Center
-            ) {
-                customIcon()
-            }
-        } else if (lottieArt != null) {
+        if (lottieArt != null) {
             // Анимация из assets/lottie (с погодными вариантами дома)
             LottieArtView(
                 art = lottieArt,
                 size = lottieSize
             )
         } else {
-            val comp by rememberLottieComposition(LottieCompositionSpec.RawRes(lottieRes))
-            LottieAnimation(
-                composition = comp,
-                iterations = LottieConstants.IterateForever,
-                modifier = Modifier.size(lottieSize)
-            )
+            // Резерв: пустое место, если анимация не задана
+            Spacer(Modifier.size(lottieSize))
         }
         if (valueText != null) {
             Text(
