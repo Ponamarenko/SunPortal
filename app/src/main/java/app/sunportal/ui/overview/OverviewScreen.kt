@@ -41,6 +41,7 @@ fun OverviewScreen(
     val state by vm.uiState.collectAsState()
     val bstate by bvm.state.collectAsState()
     val wstate by wvm.state.collectAsState()
+    val householdId by vm.householdType.collectAsState()
 
     Column(
         modifier = Modifier
@@ -71,7 +72,9 @@ fun OverviewScreen(
                         modifier = Modifier.fillMaxSize(),
                         compact = true,
                         // Дом на схеме отражает погоду (дождь/снег/солнце)
-                        weatherCode = wstate.data?.current?.code
+                        weatherCode = wstate.data?.current?.code,
+                        // Иконка типа домовладения (Svitgrid)
+                        householdId = householdId
                     )
                 }
             }

@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -16,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
@@ -28,6 +30,8 @@ import app.sunportal.data.SettingsRepository
 import app.sunportal.data.WEATHER_SOURCE_AUTO
 import app.sunportal.data.WEATHER_SOURCE_OPEN_METEO
 import app.sunportal.data.WEATHER_SOURCE_SERVER
+import app.sunportal.model.DEFAULT_HOUSEHOLD_ID
+import app.sunportal.model.HOUSEHOLD_TYPES
 import app.sunportal.ui.common.LabelGray
 import app.sunportal.ui.common.SvitScreenBg
 import app.sunportal.ui.common.SvitgridCard
@@ -308,6 +312,67 @@ fun SettingsScreen() {
                     color = LabelGray,
                     fontFamily = JetBrainsMono
                 )
+            }
+        }
+
+        // --- ТИП ДОМОВОЛОДІННЯ (иконки Svitgrid) ---
+        SvitgridCard(modifier = Modifier.fillMaxWidth()) {
+            CardTitle("Тип домоволодіння")
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Іконка домівки показується в схемі потоків на головній",
+                fontSize = 11.sp,
+                lineHeight = 14.sp,
+                color = LabelGray,
+                fontFamily = JetBrainsMono
+            )
+            Spacer(Modifier.height(10.dp))
+
+            val currentHousehold by repo.householdType.collectAsState(initial = DEFAULT_HOUSEHOLD_ID)
+            HOUSEHOLD_TYPES.chunked(4).forEach { rowItems ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    rowItems.forEach { type ->
+                        val sel = currentHousehold == type.id
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (sel) PVColor.copy(alpha = 0.14f) else Color.White.copy(alpha = 0.04f))
+                                .border(
+                                    width = 1.dp,
+                                    color = if (sel) PVColor else Color.White.copy(alpha = 0.15f),
+                                    shape = RoundedCornerShape(10.dp)
+                                )
+                                .clickable { scope.launch { repo.saveHouseholdType(type.id) } }
+                                .padding(vertical = 6.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Image(
+                                painter = painterResource(type.iconRes),
+                                contentDescription = type.title,
+                                modifier = Modifier.size(38.dp)
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                text = type.title,
+                                fontSize = 8.sp,
+                                lineHeight = 10.sp,
+                                color = if (sel) PVColor else LabelGray,
+                                fontFamily = JetBrainsMono,
+                                textAlign = TextAlign.Center,
+                                maxLines = 2
+                            )
+                        }
+                    }
+                    // пустые места последнего ряда — чтобы колонки не растягивались
+                    repeat(4 - rowItems.size) {
+                        Spacer(Modifier.weight(1f))
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
             }
         }
 

@@ -48,6 +48,7 @@ import java.time.temporal.ChronoUnit
 @Composable
 fun LiveScreen(vm: LiveViewModel = viewModel()) {
     val state by vm.uiState.collectAsState()
+    val householdId by vm.householdType.collectAsState()
 
     Box(
         modifier = Modifier
@@ -72,7 +73,7 @@ fun LiveScreen(vm: LiveViewModel = viewModel()) {
             }
             else -> {
                 // При недоступном сервере state.data — последние сохранённые данные
-                state.data?.let { d -> InverterScheme(d) }
+                state.data?.let { d -> InverterScheme(d, householdId) }
             }
         }
     }
@@ -351,7 +352,7 @@ private fun activeBlackoutText(resp: BlackoutResponse?): String? {
  * ниже — общая схема потоков (ui/common/FlowScheme.kt, та же, что в Overview).
  */
 @Composable
-private fun InverterScheme(d: LiveData) {
+private fun InverterScheme(d: LiveData, householdId: String) {
     // Блекаут (та же BlackoutViewModel, що в Overview)
     val blackoutVm: BlackoutViewModel = viewModel()
     val blackoutState by blackoutVm.state.collectAsState()
@@ -381,7 +382,8 @@ private fun InverterScheme(d: LiveData) {
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
-            weatherCode = weatherCode
+            weatherCode = weatherCode,
+            householdId = householdId
         )
     }
 }

@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import app.sunportal.model.DEFAULT_HOUSEHOLD_ID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -25,6 +26,7 @@ class SettingsRepository(ctx: Context) {
     private val KEY_WEATHER_LON = stringPreferencesKey("weather_lon")
     private val KEY_WEATHER_SOURCE = stringPreferencesKey("weather_source")
     private val KEY_CACHE_LIVE = stringPreferencesKey("cache_live_json")
+    private val KEY_HOUSEHOLD = stringPreferencesKey("household_type")
 
     private val defaultFont = "medium"
     private val defaultPadding = "12.dp"
@@ -61,6 +63,9 @@ class SettingsRepository(ctx: Context) {
 
     /** Последние успешно полученные данные станции (JSON) — для офлайн-режима. */
     val liveCache: Flow<String> = context.dataStore.data.map { it[KEY_CACHE_LIVE] ?: "" }
+
+    /** Тип домовладения (иконка Svitgrid) — "cottage" по умолчанию. */
+    val householdType: Flow<String> = context.dataStore.data.map { it[KEY_HOUSEHOLD] ?: DEFAULT_HOUSEHOLD_ID }
 
     suspend fun saveServer(ip: String, port: String) {
         context.dataStore.edit { prefs ->
@@ -110,6 +115,13 @@ class SettingsRepository(ctx: Context) {
     suspend fun saveLiveCache(json: String) {
         context.dataStore.edit { prefs ->
             prefs[KEY_CACHE_LIVE] = json
+        }
+    }
+
+    /** Сохранить тип домовладения (id типа из HOUSEHOLD_TYPES). */
+    suspend fun saveHouseholdType(id: String) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_HOUSEHOLD] = id
         }
     }
 }

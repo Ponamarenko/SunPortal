@@ -5,12 +5,15 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.sunportal.api.RetrofitClient
 import app.sunportal.data.SettingsRepository
+import app.sunportal.model.DEFAULT_HOUSEHOLD_ID
 import app.sunportal.model.LiveData
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 data class LiveUiState(
@@ -38,6 +41,10 @@ class LiveViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _uiState = MutableStateFlow(LiveUiState())
     val uiState: StateFlow<LiveUiState> = _uiState.asStateFlow()
+
+    /** Тип домовладения (id) — иконка Svitgrid в узле «Дом» на схеме потоков. */
+    val householdType: StateFlow<String> = repo.householdType
+        .stateIn(viewModelScope, SharingStarted.Eagerly, DEFAULT_HOUSEHOLD_ID)
 
     init {
         loadData()

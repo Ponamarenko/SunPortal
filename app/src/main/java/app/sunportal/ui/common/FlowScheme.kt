@@ -6,25 +6,24 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -33,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.sunportal.model.LiveData
 import app.sunportal.model.WeatherCodes
+import app.sunportal.model.householdById
 import app.sunportal.ui.components.LottieArt
 import app.sunportal.ui.components.LottieArtView
 import app.sunportal.ui.theme.BatteryColor
@@ -51,7 +51,10 @@ import kotlin.math.sin
 
 val LabelGray = Color(0xB3FFFFFF)        // серый для подписей
 val GeneratorColor = Color(0xFFFF9800)   // #FF9800 — генератор
-val SmartLoadColor = Color(0xFF9C27B0)   // #9C27B0 — смарт-нагрузка
+val SmartLoadColor = Color(0x9C27B0)   // #9C27B0 — смарт-нагрузка
+
+/** Зелёный индикатор выработки PV (как в Svitgrid). */
+val PvActiveColor = Color(0xFF00A326)
 
 /** Тёмная палитра Svitgrid: фон экрана и градиент карточек #131A24 → #0A0D12. */
 val SvitScreenBg = Color(0xFF0A0D12)
@@ -82,20 +85,22 @@ fun SvitgridCard(
 }
 
 /**
- * Схема потоков энергии — точная копия Svitgrid:
- * PV сверху (0.50w, 0.15h), инвертор в центре (0.50w, 0.50h),
- * батарея слева (0.15w, 0.50h), сеть справа (0.85w, 0.50h), дом снизу (0.50w, 0.85h).
+ * Схема потоков энергии — по мотивам Svitgrid:
+ * сверху ряд из 3 PV-колонок (подпись «PV1», мощность, панель, зелёный индикатор),
+ * под ними общая шина (bus) с отводами к панелям и вертикалью к инвертору,
+ * ниже — батарея (слева), инвертор (центр), сеть (справа), дом — снизу по центру.
  * Линии, бегущие точки и стрелки — общие для Live и Overview.
  *
- * @param compact узкий экран (Overview): блок PV приподнимается, узел «Дім» поджимается
- *                вверх, чтобы подписи не выходили за пределы области. Live — compact = false.
+ * @param compact узкий экран (Overview): размеры панелей и подписей меньше
+ * @param householdId тип домовладения (иконка Svitgrid) — показывается в узле «Дом»
  */
 @Composable
 fun FlowScheme(
     d: LiveData,
     modifier: Modifier = Modifier,
     compact: Boolean = false,
-    weatherCode: Int? = null
+    weatherCode: Int? = null,
+    householdId: String? = null
 ) {
     val hour = LocalTime.now().hour
     val isDay = hour >= 6 && hour < 20
@@ -107,6 +112,9 @@ fun FlowScheme(
     val gridVoltage = d.grid_voltage_l1
     val genPower = d.p_gen ?: 0f
     val smartPower = d.p_smart_load ?: 0f
+
+    // Иконка типа домовладения (Svitgrid) — в узле «Дом»
+    val household = householdById(householdId)
 
     // Анимации прогресса (0..1, бесконечно)
     val pvProgress = rememberFlowProgress(pvPower)
@@ -123,12 +131,11 @@ fun FlowScheme(
 
         // --- Позиции узлов (центры, dp) ---
         val invX = w * 0.50f;  val invY = h * 0.50f   // инвертор — центр
-        val pvX = w * 0.50f;   val pvY = h * 0.15f    // PV — сверху
-        val battX = w * 0.15f; val battY = h * 0.50f  // батарея — слева
-        val gridX = w * 0.85f; val gridY = h * 0.50f  // сеть — справа
+        val battX = w * 0.16f; val battY = h * 0.50f  // батарея — слева
+        val gridX = w * 0.84f; val gridY = h * 0.50f  // сеть — справа
         val homeX = w * 0.50f; val homeY = h * 0.85f  // дом — снизу
-        val genX = w * 0.15f;  val genY = h * 0.75f   // генератор — слева-снизу
-        val smartX = w * 0.85f; val smartY = h * 0.75f // смарт-нагрузка — справа-снизу
+        val genX = w * 0.16f;  val genY = h * 0.75f   // генератор — слева-снизу
+        val smartX = w * 0.84f; val smartY = h * 0.75f // смарт-нагрузка — справа-снизу
 
         // --- Размеры элементов: Live — как было, Overview (compact) — меньше ---
         val nodeSize = if (compact) 56.dp else 80.dp        // батарея/сеть/дом
@@ -142,33 +149,39 @@ fun FlowScheme(
         val subLine = if (compact) 13.sp else TextUnit.Unspecified
         val labelLine = if (compact) 13.sp else TextUnit.Unspecified
         // высота текста под иконкой узла (значение + подпись) — для прижатия узла «Дім»
-        val nodeTextH = if (compact) 34.dp else 44.dp
+        val nodeTextH = if (compact) 32.dp else 48.dp
 
-        // --- PV-блок, точки отвода линий (по одной от каждой панели) ---
-        val pvBlockW = if (compact) 156.dp else 160.dp
-        val pvBlockH = if (compact) 78.dp else 100.dp
-        val pvPanelSize = if (compact) 34.dp else 45.dp
-        val pvBlockCx = pvX
-        // compact: не даём блоку выйти за верх области
-        val pvCenterY = if (compact) maxOf(pvY, pvBlockH * 0.5f + 2.dp) else pvY
-        val pvBlockBottom = pvCenterY + pvBlockH * 0.5f
-        // центры панелей PV1..PV3 внутри блока (равные расстояния, SpaceEvenly)
-        val pvColW = (pvBlockW - 12.dp) / 3f
-        val pvPanelXs = (0 until 3).map { i ->
-            pvBlockCx - pvBlockW * 0.5f + 6.dp + pvColW * (i + 0.5f)
-        }
+        // --- PV-ряд: 3 колонки (как в Svitgrid) над батареей / инвертором / сетью ---
+        val pvColW = if (compact) 92.dp else 104.dp
+        val pvColXs = listOf(battX, w * 0.50f, gridX)
+        val pvCaptionSize = if (compact) 8.sp else 9.sp
+        val pvValueSize = if (compact) 10.sp else 11.sp
+        val pvCaptionLine = if (compact) 9.sp else 10.sp
+        val pvValueLine = if (compact) 11.sp else 12.sp
+        val pvPanelSize = if (compact) 30.dp else 42.dp
+        val pvDotSize = if (compact) 5.dp else 6.dp
+        // общий итог PV — над рядом (только в Live, в Overview места мало)
+        val showPvTotal = !compact
+        val pvRowTop = if (showPvTotal) 14.dp else 0.dp
+        // высота PV-ряда: подпись + мощность + панель + индикатор
+        val pvRowH = pvRowTop +
+            pvCaptionLine.value.dp + pvValueLine.value.dp + pvPanelSize + pvDotSize + 6.dp
+        // шина PV — под рядом панелей (но выше инвертора)
+        val busY = maxOf(
+            minOf(h * 0.34f, maxOf(pvRowH + 14.dp, h * 0.20f)),
+            pvRowH + 4.dp
+        )
 
         // --- Точки отрезков линий (обрезаны у инвертора) ---
-        // Батарея ↔ Инвертор: горизонтальная y=0.50h, от 0.20w до 0.45w
-        val battLineLeft = px(density, w * 0.20f, h * 0.50f)
+        // Батарея ↔ Инвертор: горизонтальная y=0.50h, от 0.21w до 0.45w
+        val battLineLeft = px(density, w * 0.21f, h * 0.50f)
         val battLineRight = px(density, w * 0.45f, h * 0.50f)
-        // Сеть ↔ Инвертор: горизонтальная y=0.50h, от 0.80w до 0.55w
-        val gridLineRight = px(density, w * 0.80f, h * 0.50f)
+        // Сеть ↔ Инвертор: горизонтальная y=0.50h, от 0.79w до 0.55w
+        val gridLineRight = px(density, w * 0.79f, h * 0.50f)
         val gridLineLeft = px(density, w * 0.55f, h * 0.50f)
         // Инвертор → Дом: вертикальная x=0.50w; нижний конец подтыкается под иконку дома
-        val homeNodeTop = if (compact)
-            minOf(homeY - nodeSize * 0.5f, h - (nodeSize + nodeTextH + 2.dp))
-        else homeY - 40.dp
+        // Дом снизу: прижат к низу, чтобы значение и подпись не уходили за край
+        val homeNodeTop = minOf(homeY - nodeSize * 0.5f, h - (nodeSize + nodeTextH + 2.dp))
         val homeLineTop = px(density, w * 0.50f, invY + 20.dp)
         val homeLineBottom = px(
             density,
@@ -179,8 +192,6 @@ fun FlowScheme(
         val invPos = px(density, invX, invY)
         val genPos = px(density, genX, genY)
         val smartPos = px(density, smartX, smartY)
-        // Линии от каждой панели PV: начало — низ PV-блока под центром панели
-        val pvLineStarts = pvPanelXs.map { cx -> px(density, cx, pvBlockBottom) }
 
         // --- Фон: линии + бегущие точки + стрелки у конца ---
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -188,31 +199,40 @@ fun FlowScheme(
             val dotRadiusPx = 4.dp.toPx()     // точки 4.dp
             val arrowSizePx = 8.dp.toPx()     // стрелки 8.dp (у конца линии)
 
-            // 1) PV1/PV2/PV3 → Инвертор: плавные кривые Безье (Path + cubicTo)
-            // Начало — низ PV-блока под панелью, конец — верх инвертора;
-            // control-точки тянут по вертикали → линия плавно загибается к центру
-            val invTopPx = 20.dp.toPx()
-            val pvCtrl = 60.dp.toPx()
-            val invTop = Offset(invPos.x, invPos.y - invTopPx)
-            pvLineStarts.forEach { start ->
-                val pvPath = Path().apply {
-                    moveTo(start.x, start.y)
-                    cubicTo(
-                        start.x, start.y + pvCtrl,
-                        invTop.x, invTop.y - pvCtrl,
-                        invTop.x, invTop.y
-                    )
-                }
-                drawPath(
-                    path = pvPath,
-                    color = if (pvPower > 0f) PVColor else Color.Gray,
-                    style = Stroke(width = strokeWidthPx, cap = StrokeCap.Round)
-                )
+            // 1) PV-шина: горизонтальная линия под рядом панелей + узлы (квадраты)
+            val busLeft = px(density, pvColXs[0], busY)
+            val busRight = px(density, pvColXs[2], busY)
+            val busColor = if (pvPower > 0f) PVColor else Color.Gray
+            drawLine(
+                color = busColor,
+                start = busLeft,
+                end = busRight,
+                strokeWidth = strokeWidthPx,
+                cap = StrokeCap.Round
+            )
+            // отводы: панель → шина (с бегущими точками, если есть выработка)
+            pvColXs.forEach { cx ->
+                val top = px(density, cx, pvRowH)
+                val bot = px(density, cx, busY)
+                drawFlowLine(top, bot, pvPower > 0f, PVColor, strokeWidthPx)
                 if (pvPower > 0f) {
-                    // точки бегут вдоль Path (PathMeasure), стрелка — у конца Path
-                    drawFlowDotsOnPath(pvPath, PVColor, pvProgress, dotRadiusPx)
-                    drawFlowArrowOnPath(pvPath, PVColor, arrowSizePx)
+                    drawFlowDots(top, bot, PVColor, pvProgress, dotRadiusPx)
                 }
+                // узел на шине
+                val s = 5.dp.toPx()
+                drawRect(
+                    color = busColor,
+                    topLeft = Offset(bot.x - s / 2f, bot.y - s / 2f),
+                    size = Size(s, s)
+                )
+            }
+            // шина → инвертор (центральная вертикаль, поток вниз)
+            val busInvTop = px(density, w * 0.50f, busY)
+            val busInvBottom = px(density, w * 0.50f, maxOf(invY - 24.dp, busY + 20.dp))
+            drawFlowLine(busInvTop, busInvBottom, pvPower > 0f, PVColor, strokeWidthPx)
+            if (pvPower > 0f) {
+                drawFlowDots(busInvTop, busInvBottom, PVColor, pvProgress, dotRadiusPx)
+                drawFlowArrow(busInvTop, busInvBottom, PVColor, arrowSizePx)
             }
 
             // 2) Батарея ↔ Инвертор (горизонтальная; направление по знаку p_batt)
@@ -267,17 +287,45 @@ fun FlowScheme(
             }
         }
 
-        // --- PV-блок сверху: пунктирный фон, 3 панели, у каждой своя линия ---
-        PvBlock(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .offset(x = pvBlockCx - pvBlockW * 0.5f, y = pvCenterY - pvBlockH * 0.5f)
-                .size(width = pvBlockW, height = pvBlockH),
-            strings = listOf(d.p_string1, d.p_string2, d.p_string3),
-            total = pvPower,
-            isDay = isDay,
-            panelSize = pvPanelSize
-        )
+        // --- Итог PV (над рядом колонок) ---
+        if (showPvTotal) {
+            Text(
+                text = "☀ ${"%.1f".format(pvPower / 1000f).replace('.', ',')} кВт",
+                color = PVColor,
+                fontSize = 11.sp,
+                lineHeight = 12.sp,
+                fontFamily = JetBrainsMono,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .offset(x = w * 0.50f - 40.dp, y = 0.dp)
+                    .width(80.dp),
+                textAlign = TextAlign.Center
+            )
+        }
+
+        // --- PV-ряд: 3 колонки ---
+        val pvStrings = listOf(d.p_string1, d.p_string2, d.p_string3)
+        pvColXs.forEachIndexed { i, cx ->
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .offset(x = cx - pvColW * 0.5f, y = pvRowTop)
+                    .width(pvColW)
+            ) {
+                PvColumn(
+                    index = i + 1,
+                    power = pvStrings.getOrElse(i) { 0f },
+                    isDay = isDay,
+                    panelSize = pvPanelSize,
+                    dotSize = pvDotSize,
+                    captionSize = pvCaptionSize,
+                    valueSize = pvValueSize,
+                    captionLine = pvCaptionLine,
+                    valueLine = pvValueLine
+                )
+            }
+        }
 
         // Инвертор (центр — маленький, без подписи)
         Box(
@@ -333,7 +381,7 @@ fun FlowScheme(
             color = GridColor
         )
 
-        // Дом снизу
+        // Дом снизу (с иконкой типа домовладения)
         SchemeNode(
             modifier = Modifier
                 .align(Alignment.TopStart)
@@ -345,6 +393,7 @@ fun FlowScheme(
             subText = null,
             smallText = null,
             labelText = "Споживання",
+            badgeRes = household.iconRes,
             valueSize = valueSize,
             subSize = subSize,
             labelSize = labelSize,
@@ -354,9 +403,11 @@ fun FlowScheme(
             color = LoadColor
         )
 
-        // Иконка погоды над домом: emoji по WMO-коду (тот же набор, что и в карточке)
+        // Иконка погоды над домом: emoji по WMO-коду (тот же набор, что и в карточке).
+        // В Overview (compact) не показываем — там погода уже есть в карточке сверху,
+        // а над домом места мало (иначе налезает на инвертор).
         val weatherIconStr = if (weatherCode != null) WeatherCodes.icon(weatherCode) else ""
-        if (weatherIconStr.isNotEmpty()) {
+        if (weatherIconStr.isNotEmpty() && !compact) {
             Box(
                 modifier = Modifier
                     .align(Alignment.TopStart)
@@ -478,80 +529,56 @@ private fun buildGridStatus(pgrid: Float, voltage: Float?): String {
 }
 
 /**
- * PV-блок Svitgrid: сверху общая мощность «1,2 кВт», далее 3 панели в ряд (45.dp):
- * над каждой — мощность, под каждой — «PV1 · 0,6» (название · кВт). Пунктирная рамка.
+ * Одна PV-колонка (как в Svitgrid): подпись «PV1», мощность в кВт,
+ * панель (Lottie solar) и зелёный индикатор выработки.
  */
 @Composable
-private fun PvBlock(
-    modifier: Modifier = Modifier,
-    strings: List<Float>,
-    total: Float,
+private fun PvColumn(
+    index: Int,
+    power: Float,
     isDay: Boolean,
-    panelSize: Dp
+    panelSize: Dp,
+    dotSize: Dp,
+    captionSize: TextUnit,
+    valueSize: TextUnit,
+    captionLine: TextUnit,
+    valueLine: TextUnit
 ) {
-    Box(
-        modifier = modifier
-            .drawBehind {
-                drawRoundRect(
-                    color = PVColor.copy(alpha = 0.45f),
-                    cornerRadius = CornerRadius(12.dp.toPx()),
-                    style = Stroke(
-                        width = 2.dp.toPx(),
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f, 10f))
-                    )
-                )
-            }
-            .padding(horizontal = 6.dp, vertical = 4.dp)
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(
+        Text(
+            text = "PV$index",
+            color = LabelGray,
+            fontSize = captionSize,
+            lineHeight = captionLine,
+            fontFamily = JetBrainsMono,
+            maxLines = 1
+        )
+        Text(
+            text = "${"%.1f".format(power / 1000f).replace('.', ',')} кВт",
+            color = PVColor,
+            fontSize = valueSize,
+            lineHeight = valueLine,
+            fontFamily = JetBrainsMono,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
+        )
+        LottieArtView(
+            art = if (isDay) LottieArt.SOLAR else LottieArt.SOLAR_NIGHT,
+            size = panelSize,
+            speed = if (power > 0f) 1f else 0.15f
+        )
+        // Индикатор выработки: зелёный — идёт, серый — пауза
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                // unbounded: не даём родителю «съесть» последнюю строку (подписи PV1..PV3)
-                .wrapContentHeight(unbounded = true),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Общая PV-мощность, lineHeight явный — иначе наследуется 24.sp из Typography
-            Text(
-                text = "${"%.1f".format(total / 1000f).replace('.', ',')} кВт",
-                color = PVColor,
-                fontSize = 11.sp,
-                lineHeight = 12.sp,
-                fontFamily = JetBrainsMono,
-                fontWeight = FontWeight.Bold
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                strings.forEachIndexed { i, power ->
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        // Над панелью: V·I в API нет — только мощность
-                        Text(
-                            text = "${power.toInt()} Вт",
-                            color = PVColor,
-                            fontSize = 8.5.sp,
-                            lineHeight = 11.sp,
-                            fontFamily = JetBrainsMono
-                        )
-                        // Панель: чем больше выработка PV — тем быстрее анимация
-                        LottieArtView(
-                            art = if (isDay) LottieArt.SOLAR else LottieArt.SOLAR_NIGHT,
-                            size = panelSize,
-                            speed = if (total > 0f) 1f else 0.15f
-                        )
-                        // Под панелью: «PV1 · 0,6»
-                        Text(
-                            text = "PV${i + 1} · ${"%.1f".format(power / 1000f).replace('.', ',')}",
-                            color = LabelGray,
-                            fontSize = 8.5.sp,
-                            lineHeight = 11.sp,
-                            fontFamily = JetBrainsMono,
-                            maxLines = 1
-                        )
-                    }
-                }
-            }
-        }
+                .size(dotSize)
+                .background(
+                    color = if (power > 0f) PvActiveColor else Color.White.copy(alpha = 0.25f),
+                    shape = CircleShape
+                )
+        )
     }
 }
 
@@ -608,35 +635,6 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFlowDots(
         )
         drawCircle(color = color, radius = radiusPx, center = pos)
     }
-}
-
-/** Точки вдоль Path (PathMeasure): 3 точки со смещением 0, 0.33, 0.66. */
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFlowDotsOnPath(
-    path: Path,
-    color: Color,
-    progress: Float,
-    radiusPx: Float
-) {
-    val pm = PathMeasure().apply { setPath(path, false) }
-    val len = pm.length
-    if (len <= 0f) return
-    listOf(0f, 0.33f, 0.66f).forEach { offset ->
-        val t = (progress + offset) % 1f
-        drawCircle(color = color, radius = radiusPx, center = pm.getPosition(len * t))
-    }
-}
-
-/** Стрелка у КОНЦА Path: направление — касательная в конце (tan от PathMeasure). */
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFlowArrowOnPath(
-    path: Path,
-    color: Color,
-    sizePx: Float
-) {
-    val pm = PathMeasure().apply { setPath(path, false) }
-    val len = pm.length
-    if (len <= 0f) return
-    val tan = pm.getTangent(len)
-    drawFlowArrowAt(atan2(tan.y, tan.x), pm.getPosition(len), color, sizePx)
 }
 
 /**
@@ -707,6 +705,7 @@ private fun SchemeNode(
     valueLine: TextUnit = TextUnit.Unspecified,
     subLine: TextUnit = TextUnit.Unspecified,
     labelLine: TextUnit = TextUnit.Unspecified,
+    badgeRes: Int? = null,
     color: Color
 ) {
     Column(
@@ -760,17 +759,32 @@ private fun SchemeNode(
                 color = LabelGray,
                 fontSize = labelSize,
                 lineHeight = labelLine,
+                fontFamily = JetBrainsMono,
                 textAlign = TextAlign.Center
             )
         }
-        if (labelText != null) {
-            Text(
-                text = labelText,
-                color = LabelGray,
-                fontSize = labelSize,
-                lineHeight = labelLine,
-                textAlign = TextAlign.Center
-            )
+        if (labelText != null || badgeRes != null) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (badgeRes != null) {
+                    // Иконка типа домовладения (Svitgrid)
+                    Image(
+                        painter = painterResource(badgeRes),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                }
+                if (labelText != null) {
+                    Text(
+                        text = labelText,
+                        color = LabelGray,
+                        fontSize = labelSize,
+                        lineHeight = labelLine,
+                        fontFamily = JetBrainsMono,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
         }
     }
 }
