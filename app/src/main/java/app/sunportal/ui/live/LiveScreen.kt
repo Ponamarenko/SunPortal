@@ -5,7 +5,9 @@ import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.Menu
@@ -31,11 +33,15 @@ import app.sunportal.model.LiveData
 import app.sunportal.ui.common.BatteryStatusLine
 import app.sunportal.ui.common.FlowScheme
 import app.sunportal.ui.common.LabelGray
+import app.sunportal.ui.notifications.Notifier
 import app.sunportal.ui.overview.BlackoutViewModel
 import app.sunportal.ui.overview.WeatherViewModel
 import app.sunportal.ui.theme.JetBrainsMono
-import java.time.LocalTime
+import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
@@ -87,6 +93,8 @@ fun LiveTopBar(onMenu: () -> Unit) {
     val cur = weatherState.data?.current
     val view = LocalView.current
     var fullscreen by remember { mutableStateOf(false) }
+    var showAlerts by remember { mutableStateOf(false) }
+    val alerts by Notifier.history.collectAsState()
 
     TopAppBar(
         title = {
@@ -141,19 +149,8 @@ fun LiveTopBar(onMenu: () -> Unit) {
             }
         },
         actions = {
-            // Колокольчик → настройки уведомлений приложения (канал «Сповіщення станції»)
-            IconButton(onClick = {
-                val ctx = view.context
-                try {
-                    ctx.startActivity(
-                        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                            putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName)
-                        }
-                    )
-                } catch (e: Exception) {
-                    // на части прошивок экран настроек уведомлений недоступен — молча игнорируем
-                }
-            }) {
+            // Колокольчик → история оповещений (и настройки уведомлений в диалоге)
+            IconButton(onClick = { showAlerts = true }) {
                 Icon(Icons.Default.Notifications, contentDescription = "Сповіщення")
             }
             IconButton(onClick = {
@@ -172,7 +169,84 @@ fun LiveTopBar(onMenu: () -> Unit) {
             }
         }
     )
+
+    // --- История оповещений ---
+    if (showAlerts) {
+        AlertDialog(
+            onDismissRequest = { showAlerts = false },
+            title = {
+                Text(
+                    text = "Сповіщення",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = JetBrainsMono
+                )
+            },
+            text = {
+                if (alerts.isEmpty()) {
+                    Text(
+                        text = "Поки що немає сповіщень",
+                        fontSize = 12.sp,
+                        color = LabelGray,
+                        fontFamily = JetBrainsMono
+                    )
+                } else {
+                    Column(
+                        modifier = Modifier.verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        alerts.forEach { a ->
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    text = "${formatAlertTime(a.time)}  ${a.title}",
+                                    fontSize = 12.sp,
+                                    lineHeight = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    fontFamily = JetBrainsMono
+                                )
+                                Text(
+                                    text = a.text,
+                                    fontSize = 11.sp,
+                                    lineHeight = 14.sp,
+                                    color = LabelGray,
+                                    fontFamily = JetBrainsMono
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAlerts = false }) {
+                    Text("Закрити", fontFamily = JetBrainsMono)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showAlerts = false
+                    val ctx = view.context
+                    try {
+                        ctx.startActivity(
+                            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName)
+                            }
+                        )
+                    } catch (e: Exception) {
+                        // на части прошивок экран настроек уведомлений недоступен
+                    }
+                }) {
+                    Text("Налаштування", fontFamily = JetBrainsMono)
+                }
+            }
+        )
+    }
 }
+
+/** Время события в формате HH:mm. */
+private fun formatAlertTime(ms: Long): String =
+    LocalDateTime.ofInstant(Instant.ofEpochMilli(ms), ZoneId.systemDefault())
+        .format(DateTimeFormatter.ofPattern("HH:mm"))
 
 /**
  * Таймлайн суток: 24 сегмента по часу, высота 20.dp, скругление 4.dp.
@@ -202,7 +276,7 @@ private fun BlackoutTimeline(slots: List<BlackoutSlot>?) {
     }
 }
 
-/** Часы (0..23), пересекающиеся со слотами блекаута (слот [start,end) → часы красные). */
+/** Часы (0..23), пересекающиеся со слотами блекаута (слот [start,end)) → часы красные. */
 private fun computeRedHours(slots: List<BlackoutSlot>?): Set<Int> {
     slots ?: return emptySet()
     val red = mutableSetOf<Int>()

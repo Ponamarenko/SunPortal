@@ -13,6 +13,16 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import app.sunportal.MainActivity
 import app.sunportal.R
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
+/** Запись в истории оповещений (показывается по колокольчику в шапке HOME). */
+data class AlertItem(
+    val time: Long,
+    val title: String,
+    val text: String
+)
 
 /**
  * Уведомления SunPortal: один канал «Сповіщення станції».
@@ -25,6 +35,14 @@ object Notifier {
     const val CHANNEL_ID = "sunportal_alerts"
 
     private const val CHANNEL_NAME = "Сповіщення станції"
+
+    /** Сколько событий держим в истории. */
+    private const val MAX_HISTORY = 20
+
+    private val _history = MutableStateFlow<List<AlertItem>>(emptyList())
+
+    /** Последние события станции (в памяти приложения). */
+    val history: StateFlow<List<AlertItem>> = _history.asStateFlow()
 
     /** Уведомление: началось отключение. */
     const val ID_BLACKOUT = 1001
@@ -55,9 +73,10 @@ object Notifier {
 
     /**
      * Показать уведомление. Если разрешения нет (Android 13+ / пользователь отказал) —
-     * тихо ничего не делаем.
+     * тихо ничего не делаем (но событие всё равно попадёт в историю внутри приложения).
      */
     fun show(context: Context, id: Int, title: String, text: String) {
+        log(title, text)
         ensureChannel(context)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -93,5 +112,11 @@ object Notifier {
         } catch (e: Exception) {
             // Нет разрешения или канал недоступен — молча игнорируем
         }
+    }
+
+    /** Записать событие в историю (в памяти, до 20 записей). */
+    fun log(title: String, text: String) {
+        val item = AlertItem(System.currentTimeMillis(), title, text)
+        _history.value = (listOf(item) + _history.value).take(MAX_HISTORY)
     }
 }
