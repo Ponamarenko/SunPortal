@@ -32,6 +32,12 @@ object Notifier {
     /** Уведомление: скоро отключение. */
     const val ID_BLACKOUT_SOON = 1002
 
+    /** Уведомление: аккумулятор заряжен. */
+    const val ID_BATTERY_FULL = 1003
+
+    /** Уведомление: низкий заряд аккумулятора во время отключения. */
+    const val ID_BATTERY_LOW = 1004
+
     /** Создать канал (безопасно вызывать многократно). */
     fun ensureChannel(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
