@@ -31,7 +31,6 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.sunportal.model.LiveData
-import app.sunportal.model.WeatherCodes
 import app.sunportal.model.householdById
 import app.sunportal.ui.components.LottieArt
 import app.sunportal.ui.components.LottieArtView
@@ -92,6 +91,8 @@ fun SvitgridCard(
  * Линии, бегущие точки и стрелки — общие для Live и Overview.
  *
  * @param compact узкий экран (Overview): размеры панелей и подписей меньше
+ * @param weatherCode текущий код погоды WMO — выбор варианта дома
+ * @param windSpeed скорость ветра, м/с — при сильном ветре дом «ветреный»
  * @param householdId тип домовладения (иконка Svitgrid) — показывается в узле «Дом»
  */
 @Composable
@@ -100,6 +101,7 @@ fun FlowScheme(
     modifier: Modifier = Modifier,
     compact: Boolean = false,
     weatherCode: Int? = null,
+    windSpeed: Float? = null,
     householdId: String? = null
 ) {
     val hour = LocalTime.now().hour
@@ -137,10 +139,11 @@ fun FlowScheme(
         val genX = w * 0.16f;  val genY = h * 0.75f   // генератор — слева-снизу
         val smartX = w * 0.84f; val smartY = h * 0.75f // смарт-нагрузка — справа-снизу
 
-        // --- Размеры элементов: Live — как было, Overview (compact) — меньше ---
-        val nodeSize = if (compact) 56.dp else 80.dp        // батарея/сеть/дом
-        val smallNodeSize = if (compact) 46.dp else 60.dp   // генератор/смарт-нагрузка
-        val invSize = if (compact) 40.dp else 80.dp         // инвертор (Live: 80.dp)
+        // --- Размеры элементов: Live — крупные иконки, Overview (compact) — меньше ---
+        val nodeSize = if (compact) 58.dp else 88.dp        // батарея/сеть
+        val smallNodeSize = if (compact) 46.dp else 64.dp   // генератор/смарт-нагрузка
+        val invSize = if (compact) 44.dp else 84.dp         // инвертор
+        val badgeSize = if (compact) 20.dp else 28.dp       // иконка типа домовладения
         val valueSize = if (compact) 15.sp else 18.sp       // значение узла
         val subSize = if (compact) 10.sp else 12.sp         // доп. строка узла
         val labelSize = if (compact) 10.sp else 11.sp       // подпись узла
@@ -150,16 +153,37 @@ fun FlowScheme(
         val labelLine = if (compact) 13.sp else TextUnit.Unspecified
         // высота текста под иконкой узла (значение + подпись) — для прижатия узла «Дім»
         val nodeTextH = if (compact) 32.dp else 48.dp
+        // Дом — крупнее всех (как в Svitgrid), но на низких экранах ужимается,
+        // чтобы не налезать на инвертор и не уйти за нижний край
+        val homeSize = if (compact) {
+            58.dp
+        } else {
+            minOf(
+                104.dp,
+                h * 0.22f,
+                maxOf(48.dp, h - (invY + invSize * 0.5f + 8.dp) - nodeTextH - 2.dp)
+            )
+        }
+
+        // --- Толщина линий передачи: тонкие и аккуратные (как в Svitgrid) ---
+        val wireWidth = if (compact) 0.8.dp else 1.2.dp
+        val dotRadius = if (compact) 2.dp else 2.5.dp
+        val arrowSize = if (compact) 5.dp else 6.dp
 
         // --- PV-ряд: 3 колонки (как в Svitgrid) над батареей / инвертором / сетью ---
-        val pvColW = if (compact) 92.dp else 104.dp
+        // ширины колонок адаптивные — на узких экранах (320 dp) не вылезают за край
+        val battColW = minOf(110.dp, w * 0.31f)
+        val gridColW = minOf(90.dp, w * 0.25f)
+        val homeColW = minOf(110.dp, w * 0.31f)
+        val smallColW = minOf(96.dp, w * 0.27f)
+        val pvColW = if (compact) minOf(92.dp, w * 0.26f) else minOf(104.dp, w * 0.28f)
         val pvColXs = listOf(battX, w * 0.50f, gridX)
         val pvCaptionSize = if (compact) 8.sp else 9.sp
         val pvValueSize = if (compact) 10.sp else 11.sp
         val pvCaptionLine = if (compact) 9.sp else 10.sp
         val pvValueLine = if (compact) 11.sp else 12.sp
-        val pvPanelSize = if (compact) 30.dp else 42.dp
-        val pvDotSize = if (compact) 5.dp else 6.dp
+        val pvPanelSize = if (compact) 36.dp else 52.dp
+        val pvDotSize = if (compact) 5.dp else 7.dp
         // общий итог PV — над рядом (только в Live, в Overview места мало)
         val showPvTotal = !compact
         val pvRowTop = if (showPvTotal) 14.dp else 0.dp
@@ -172,16 +196,16 @@ fun FlowScheme(
             pvRowH + 4.dp
         )
 
-        // --- Точки отрезков линий (обрезаны у инвертора) ---
-        // Батарея ↔ Инвертор: горизонтальная y=0.50h, от 0.21w до 0.45w
-        val battLineLeft = px(density, w * 0.21f, h * 0.50f)
-        val battLineRight = px(density, w * 0.45f, h * 0.50f)
-        // Сеть ↔ Инвертор: горизонтальная y=0.50h, от 0.79w до 0.55w
-        val gridLineRight = px(density, w * 0.79f, h * 0.50f)
-        val gridLineLeft = px(density, w * 0.55f, h * 0.50f)
+        // --- Точки отрезков линий: концы у краёв иконок, чтобы стрелки были видны ---
+        // Батарея ↔ Инвертор: горизонтальная y=0.50h, от края батареи до края инвертора
+        val battLineLeft = px(density, battX + nodeSize * 0.5f + 4.dp, h * 0.50f)
+        val battLineRight = px(density, invX - invSize * 0.5f - 4.dp, h * 0.50f)
+        // Сеть ↔ Инвертор: горизонтальная y=0.50h, от края инвертора до края сети
+        val gridLineRight = px(density, gridX - nodeSize * 0.5f - 4.dp, h * 0.50f)
+        val gridLineLeft = px(density, invX + invSize * 0.5f + 4.dp, h * 0.50f)
         // Инвертор → Дом: вертикальная x=0.50w; нижний конец подтыкается под иконку дома
         // Дом снизу: прижат к низу, чтобы значение и подпись не уходили за край
-        val homeNodeTop = minOf(homeY - nodeSize * 0.5f, h - (nodeSize + nodeTextH + 2.dp))
+        val homeNodeTop = minOf(homeY - homeSize * 0.5f, h - (homeSize + nodeTextH + 2.dp))
         val homeLineTop = px(density, w * 0.50f, invY + 20.dp)
         val homeLineBottom = px(
             density,
@@ -195,9 +219,9 @@ fun FlowScheme(
 
         // --- Фон: линии + бегущие точки + стрелки у конца ---
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val strokeWidthPx = 2.dp.toPx()   // линии 2.dp
-            val dotRadiusPx = 4.dp.toPx()     // точки 4.dp
-            val arrowSizePx = 8.dp.toPx()     // стрелки 8.dp (у конца линии)
+            val strokeWidthPx = wireWidth.toPx()     // тонкие линии передачи
+            val dotRadiusPx = dotRadius.toPx()        // мелкие бегущие точки
+            val arrowSizePx = arrowSize.toPx()        // аккуратные стрелки у конца
 
             // 1) PV-шина: горизонтальная линия под рядом панелей + узлы (квадраты)
             val busLeft = px(density, pvColXs[0], busY)
@@ -219,20 +243,28 @@ fun FlowScheme(
                     drawFlowDots(top, bot, PVColor, pvProgress, dotRadiusPx)
                 }
                 // узел на шине
-                val s = 5.dp.toPx()
+                val s = 4.dp.toPx()
                 drawRect(
                     color = busColor,
                     topLeft = Offset(bot.x - s / 2f, bot.y - s / 2f),
                     size = Size(s, s)
                 )
             }
-            // шина → инвертор (центральная вертикаль, поток вниз)
+            // шина → инвертор (центральная вертикаль, поток вниз).
+            // Линия заканчивается над верхним краем иконки инвертора, чтобы стрелка
+            // была видна, а не пряталась под анимацией.
+            val invTopY = invY - invSize * 0.5f
+            val busInvEndY =
+                if (invTopY - 6.dp >= busY + 16.dp) invTopY - 6.dp else busY + 16.dp
             val busInvTop = px(density, w * 0.50f, busY)
-            val busInvBottom = px(density, w * 0.50f, maxOf(invY - 24.dp, busY + 20.dp))
+            val busInvBottom = px(density, w * 0.50f, busInvEndY)
             drawFlowLine(busInvTop, busInvBottom, pvPower > 0f, PVColor, strokeWidthPx)
             if (pvPower > 0f) {
                 drawFlowDots(busInvTop, busInvBottom, PVColor, pvProgress, dotRadiusPx)
-                drawFlowArrow(busInvTop, busInvBottom, PVColor, arrowSizePx)
+                // стрелка только если отрезок не слишком короткий (иначе прячется под иконкой)
+                if (busInvEndY - busY > 20.dp) {
+                    drawFlowArrow(busInvTop, busInvBottom, PVColor, arrowSizePx)
+                }
             }
 
             // 2) Батарея ↔ Инвертор (горизонтальная; направление по знаку p_batt)
@@ -265,7 +297,7 @@ fun FlowScheme(
                 val gl = hypot((invPos.x - genPos.x).toDouble(), (invPos.y - genPos.y).toDouble()).toFloat()
                 val gux = (invPos.x - genPos.x) / gl
                 val guy = (invPos.y - genPos.y) / gl
-                val genTrim = 20.dp.toPx()
+                val genTrim = smallNodeSize * 0.4f + 4.dp
                 val genStart = Offset(genPos.x + gux * genTrim, genPos.y + guy * genTrim)
                 val genEnd = Offset(invPos.x - gux * genTrim, invPos.y - guy * genTrim)
                 drawFlowLine(genStart, genEnd, true, GeneratorColor, strokeWidthPx)
@@ -278,7 +310,7 @@ fun FlowScheme(
                 val sl = hypot((smartPos.x - invPos.x).toDouble(), (smartPos.y - invPos.y).toDouble()).toFloat()
                 val sux = (smartPos.x - invPos.x) / sl
                 val suy = (smartPos.y - invPos.y) / sl
-                val smartTrim = 20.dp.toPx()
+                val smartTrim = smallNodeSize * 0.4f + 4.dp
                 val smStart = Offset(invPos.x + sux * smartTrim, invPos.y + suy * smartTrim)
                 val smEnd = Offset(smartPos.x - sux * smartTrim, smartPos.y - suy * smartTrim)
                 drawFlowLine(smStart, smEnd, true, SmartLoadColor, strokeWidthPx)
@@ -342,8 +374,8 @@ fun FlowScheme(
         SchemeNode(
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .offset(x = battX - 55.dp, y = battY - nodeSize * 0.5f),
-            columnWidth = 110.dp,
+                .offset(x = battX - battColW * 0.5f, y = battY - nodeSize * 0.5f),
+            columnWidth = battColW,
             lottieArt = LottieArt.BATTERY,
             lottieSize = nodeSize,
             valueText = "${battPower.toInt()} Вт",
@@ -364,8 +396,8 @@ fun FlowScheme(
         SchemeNode(
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .offset(x = gridX - 45.dp, y = gridY - nodeSize * 0.5f),
-            columnWidth = 90.dp,
+                .offset(x = gridX - gridColW * 0.5f, y = gridY - nodeSize * 0.5f),
+            columnWidth = gridColW,
             lottieArt = if (isDay) LottieArt.TRANSFORMER else LottieArt.TRANSFORMER_NIGHT,
             lottieSize = nodeSize,
             valueText = "${gridPower.toInt()} Вт",
@@ -385,15 +417,16 @@ fun FlowScheme(
         SchemeNode(
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .offset(x = homeX - 55.dp, y = homeNodeTop),
-            columnWidth = 110.dp,
-            lottieArt = houseArtFor(weatherCode, isDay),
-            lottieSize = nodeSize,
+                .offset(x = homeX - homeColW * 0.5f, y = homeNodeTop),
+            columnWidth = homeColW,
+            lottieArt = houseArtFor(weatherCode, isDay, windSpeed),
+            lottieSize = homeSize,
             valueText = "${loadPower.toInt()} Вт",
             subText = null,
             smallText = null,
             labelText = "Споживання",
             badgeRes = household.iconRes,
+            badgeSize = badgeSize,
             valueSize = valueSize,
             subSize = subSize,
             labelSize = labelSize,
@@ -403,34 +436,13 @@ fun FlowScheme(
             color = LoadColor
         )
 
-        // Иконка погоды над домом: emoji по WMO-коду (тот же набор, что и в карточке).
-        // В Overview (compact) не показываем — там погода уже есть в карточке сверху,
-        // а над домом места мало (иначе налезает на инвертор).
-        val weatherIconStr = if (weatherCode != null) WeatherCodes.icon(weatherCode) else ""
-        if (weatherIconStr.isNotEmpty() && !compact) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(x = homeX - 30.dp, y = homeNodeTop - 60.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = weatherIconStr,
-                    color = Color.White,
-                    fontSize = 40.sp,
-                    fontFamily = JetBrainsMono,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-
         // Генератор слева-снизу (только при p_gen > 0)
         if (genPower > 0f) {
             SchemeNode(
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .offset(x = genX - 48.dp, y = genY - smallNodeSize * 0.5f),
-                columnWidth = 96.dp,
+                    .offset(x = genX - smallColW * 0.5f, y = genY - smallNodeSize * 0.5f),
+                columnWidth = smallColW,
                 lottieArt = LottieArt.GENERATOR,
                 lottieSize = smallNodeSize,
                 valueText = "${genPower.toInt()} Вт",
@@ -452,8 +464,8 @@ fun FlowScheme(
             SchemeNode(
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .offset(x = smartX - 48.dp, y = smartY - smallNodeSize * 0.5f),
-                columnWidth = 96.dp,
+                    .offset(x = smartX - smallColW * 0.5f, y = smartY - smallNodeSize * 0.5f),
+                columnWidth = smallColW,
                 lottieArt = LottieArt.SMART_LOAD,
                 lottieSize = smallNodeSize,
                 valueText = "${smartPower.toInt()} Вт",
@@ -609,7 +621,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFlowLine(
     color: Color,
     strokeWidthPx: Float
 ) {
-    val lineColor = if (active) color else Color.Gray
+    // неактивная линия — приглушённый серый (аккуратнее, чем яркий серый)
+    val lineColor = if (active) color else Color.Gray.copy(alpha = 0.35f)
     drawLine(
         color = lineColor,
         start = start,
@@ -676,16 +689,22 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFlowArrowAt(
 
 /**
  * Анимация дома по погоде (WMO-код) и времени суток.
- * Варианты из assets/lottie: солнце / дождь / снег (+ ночные версии).
+ * Варианты из assets/lottie (вытянуты из svitgrid):
+ * солнце / дождь / снег / ветер + ночные версии.
+ * При сильном ветре (≥ 8 м/с) — «ветреный» дом.
  */
-private fun houseArtFor(weatherCode: Int?, isDay: Boolean): LottieArt =
+private fun houseArtFor(weatherCode: Int?, isDay: Boolean, windSpeed: Float?): LottieArt =
     when (weatherCode ?: -1) {
         in 51..67, in 80..82, in 95..99 ->
             if (isDay) LottieArt.HOME_RAIN else LottieArt.HOME_RAIN_NIGHT
         in 71..77, in 85..86 ->
             if (isDay) LottieArt.HOME_SNOW else LottieArt.HOME_SNOW_NIGHT
         else ->
-            if (isDay) LottieArt.HOME_SUN else LottieArt.HOME_NIGHT
+            if ((windSpeed ?: 0f) >= 8f) {
+                if (isDay) LottieArt.HOME_WINDY else LottieArt.HOME_WINDY_NIGHT
+            } else {
+                if (isDay) LottieArt.HOME_SUN else LottieArt.HOME_NIGHT
+            }
     }
 
 @Composable
@@ -706,6 +725,7 @@ private fun SchemeNode(
     subLine: TextUnit = TextUnit.Unspecified,
     labelLine: TextUnit = TextUnit.Unspecified,
     badgeRes: Int? = null,
+    badgeSize: Dp = 18.dp,
     color: Color
 ) {
     Column(
@@ -770,9 +790,9 @@ private fun SchemeNode(
                     Image(
                         painter = painterResource(badgeRes),
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(badgeSize)
                     )
-                    Spacer(Modifier.width(4.dp))
+                    Spacer(Modifier.width(6.dp))
                 }
                 if (labelText != null) {
                     Text(

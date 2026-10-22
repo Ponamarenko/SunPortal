@@ -71,8 +71,9 @@ fun OverviewScreen(
                         d = d,
                         modifier = Modifier.fillMaxSize(),
                         compact = true,
-                        // Дом на схеме отражает погоду (дождь/снег/солнце)
+                        // Дом на схеме отражает погоду (дождь/снег/солнце/ветер)
                         weatherCode = wstate.data?.current?.code,
+                        windSpeed = wstate.data?.current?.wind,
                         // Иконка типа домовладения (Svitgrid)
                         householdId = householdId
                     )

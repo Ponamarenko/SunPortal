@@ -364,6 +364,7 @@ private fun InverterScheme(d: LiveData, householdId: String) {
     val weatherVm: WeatherViewModel = viewModel()
     val weatherState by weatherVm.state.collectAsState()
     val weatherCode = weatherState.data?.current?.code
+    val windSpeed = weatherState.data?.current?.wind
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Таймлайн суток (24 сегмента): над плашкой блекаута
@@ -383,6 +384,7 @@ private fun InverterScheme(d: LiveData, householdId: String) {
                 .fillMaxWidth()
                 .weight(1f),
             weatherCode = weatherCode,
+            windSpeed = windSpeed,
             householdId = householdId
         )
     }
