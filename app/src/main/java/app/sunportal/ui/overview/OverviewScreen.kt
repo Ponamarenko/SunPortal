@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.sunportal.data.WEATHER_SOURCE_OPEN_METEO
 import app.sunportal.ui.common.FlowScheme
 import app.sunportal.ui.common.LabelGray
 import app.sunportal.ui.common.SvitScreenBg
@@ -100,6 +101,22 @@ fun WeatherCard(wstate: WeatherUiState) {
                 fontWeight = FontWeight.Bold,
                 fontFamily = JetBrainsMono
             )
+            Spacer(Modifier.width(8.dp))
+            // Бейдж источника данных
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(Color.White.copy(alpha = 0.08f))
+                    .padding(horizontal = 6.dp, vertical = 1.dp)
+            ) {
+                Text(
+                    text = if (wstate.source == WEATHER_SOURCE_OPEN_METEO) "Open-Meteo" else "Сервер",
+                    fontSize = 9.sp,
+                    lineHeight = 12.sp,
+                    color = LabelGray,
+                    fontFamily = JetBrainsMono
+                )
+            }
             Spacer(Modifier.weight(1f))
             Text(
                 text = wstate.data?.updated ?: "—",
@@ -118,12 +135,23 @@ fun WeatherCard(wstate: WeatherUiState) {
                 CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
             }
             data == null -> {
-                Text(
-                    text = "Немає даних про погоду",
-                    fontSize = 12.sp,
-                    color = LabelGray,
-                    fontFamily = JetBrainsMono
-                )
+                Column {
+                    Text(
+                        text = "Немає даних про погоду",
+                        fontSize = 12.sp,
+                        color = LabelGray,
+                        fontFamily = JetBrainsMono
+                    )
+                    if (!wstate.error.isNullOrBlank()) {
+                        Text(
+                            text = wstate.error,
+                            fontSize = 11.sp,
+                            lineHeight = 14.sp,
+                            color = Color(0xFFE74C3C),
+                            fontFamily = JetBrainsMono
+                        )
+                    }
+                }
             }
             else -> {
                 val cur = data.current

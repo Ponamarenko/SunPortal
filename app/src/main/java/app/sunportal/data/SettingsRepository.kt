@@ -11,12 +11,19 @@ import kotlinx.coroutines.flow.map
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "sunportal_settings")
 
-class SettingsRepository(private val context: Context) {
+class SettingsRepository(ctx: Context) {
+    // applicationContext — иначе на каждый Activity создаётся свой DataStore
+    // на один и тот же файл (Android падает с "multiple DataStores active")
+    private val context: Context = ctx.applicationContext
+
     private val KEY_IP = stringPreferencesKey("server_ip")
     private val KEY_PORT = stringPreferencesKey("server_port")
     private val KEY_MENU_FONT = stringPreferencesKey("menu_font_size")
     private val KEY_MENU_PADDING = stringPreferencesKey("menu_item_padding")
     private val KEY_DRAWER_EXPANDED = stringPreferencesKey("drawer_expanded_groups")
+    private val KEY_WEATHER_LAT = stringPreferencesKey("weather_lat")
+    private val KEY_WEATHER_LON = stringPreferencesKey("weather_lon")
+    private val KEY_WEATHER_SOURCE = stringPreferencesKey("weather_source")
 
     private val defaultFont = "medium"
     private val defaultPadding = "12.dp"
@@ -43,6 +50,13 @@ class SettingsRepository(private val context: Context) {
             } catch (e: Exception) { emptySet() }
         }
     }
+
+    /** Координаты для Open-Meteo (пусто — источник недоступен). */
+    val weatherLat: Flow<String> = context.dataStore.data.map { it[KEY_WEATHER_LAT] ?: "" }
+    val weatherLon: Flow<String> = context.dataStore.data.map { it[KEY_WEATHER_LON] ?: "" }
+
+    /** Источник погоды: "auto" (сервер, иначе Open-Meteo), "server", "openmeteo". */
+    val weatherSource: Flow<String> = context.dataStore.data.map { it[KEY_WEATHER_SOURCE] ?: WEATHER_SOURCE_AUTO }
 
     suspend fun saveServer(ip: String, port: String) {
         context.dataStore.edit { prefs ->
@@ -72,4 +86,24 @@ class SettingsRepository(private val context: Context) {
             }
         }
     }
+
+    /** Сохранить координаты для Open-Meteo. */
+    suspend fun saveLocation(lat: String, lon: String) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_WEATHER_LAT] = lat.trim()
+            prefs[KEY_WEATHER_LON] = lon.trim()
+        }
+    }
+
+    /** Сохранить источник погоды: "auto" | "server" | "openmeteo". */
+    suspend fun saveWeatherSource(source: String) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_WEATHER_SOURCE] = source
+        }
+    }
 }
+
+/** Источники погоды. */
+const val WEATHER_SOURCE_AUTO = "auto"
+const val WEATHER_SOURCE_SERVER = "server"
+const val WEATHER_SOURCE_OPEN_METEO = "openmeteo"

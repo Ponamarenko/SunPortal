@@ -16,6 +16,8 @@ interface OpenMeteoApi {
         @Query("current") current: String = "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,is_day",
         @Query("daily") daily: String = "weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,sunrise,sunset",
         @Query("timezone") timezone: String = "auto",
-        @Query("forecast_days") forecastDays: Int = 3
+        @Query("forecast_days") forecastDays: Int = 3,
+        // м/с — как показывает сервер SunPortal (по умолчанию Open-Meteo отдаёт км/ч)
+        @Query("wind_speed_unit") windSpeedUnit: String = "ms"
     ): OpenMeteoResponse
 }

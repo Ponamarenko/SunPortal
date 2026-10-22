@@ -22,11 +22,16 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import app.sunportal.api.RetrofitClient
 import app.sunportal.data.SettingsRepository
+import app.sunportal.data.WEATHER_SOURCE_AUTO
+import app.sunportal.data.WEATHER_SOURCE_OPEN_METEO
+import app.sunportal.data.WEATHER_SOURCE_SERVER
 import app.sunportal.ui.common.LabelGray
 import app.sunportal.ui.common.SvitScreenBg
 import app.sunportal.ui.common.SvitgridCard
+import app.sunportal.ui.overview.WeatherViewModel
 import app.sunportal.ui.theme.JetBrainsMono
 import app.sunportal.ui.theme.PVColor
 import kotlinx.coroutines.launch
@@ -44,17 +49,26 @@ fun SettingsScreen() {
     val context = LocalContext.current
     val repo = remember { SettingsRepository(context) }
     val scope = rememberCoroutineScope()
+    val weatherVm: WeatherViewModel = viewModel()
 
     val savedIp by repo.serverIp.collectAsState(initial = "ha4a.pp.ua")
     val savedPort by repo.serverPort.collectAsState(initial = "8080")
+    val savedLat by repo.weatherLat.collectAsState(initial = "")
+    val savedLon by repo.weatherLon.collectAsState(initial = "")
+    val currentSource by repo.weatherSource.collectAsState(initial = WEATHER_SOURCE_AUTO)
 
     var ip by remember { mutableStateOf(savedIp) }
     var port by remember { mutableStateOf(savedPort) }
+    var lat by remember { mutableStateOf(savedLat) }
+    var lon by remember { mutableStateOf(savedLon) }
     var status by remember { mutableStateOf("") }
+    var weatherStatus by remember { mutableStateOf("") }
 
-    LaunchedEffect(savedIp, savedPort) {
+    LaunchedEffect(savedIp, savedPort, savedLat, savedLon) {
         ip = savedIp
         port = savedPort
+        lat = savedLat
+        lon = savedLon
     }
 
     Column(
@@ -194,6 +208,106 @@ fun SettingsScreen() {
                         )
                     )
                 }
+            }
+        }
+
+        // --- ДЖЕРЕЛО ПОГОДИ ---
+        SvitgridCard(modifier = Modifier.fillMaxWidth()) {
+            CardTitle("Джерело погоди")
+            Spacer(Modifier.height(8.dp))
+
+            val sourceOptions = listOf(
+                WEATHER_SOURCE_AUTO to "Авто",
+                WEATHER_SOURCE_SERVER to "Сервер",
+                WEATHER_SOURCE_OPEN_METEO to "Open-Meteo"
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                sourceOptions.forEach { (key, label) ->
+                    val sel = currentSource == key
+                    FilterChip(
+                        selected = sel,
+                        onClick = {
+                            scope.launch {
+                                repo.saveWeatherSource(key)
+                                weatherVm.load()
+                            }
+                        },
+                        label = {
+                            Text(
+                                text = label,
+                                fontSize = 12.sp,
+                                fontFamily = JetBrainsMono,
+                                color = Color.White
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            labelColor = Color.White,
+                            selectedLabelColor = Color.White,
+                            selectedContainerColor = Color.White.copy(alpha = 0.16f)
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = sel,
+                            borderColor = Color.White.copy(alpha = 0.25f),
+                            selectedBorderColor = PVColor
+                        )
+                    )
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+
+            SvitField(
+                value = lat,
+                onValueChange = { lat = it },
+                label = "Широта (Open-Meteo)",
+                placeholder = "50.45",
+                keyboardType = KeyboardType.Decimal
+            )
+            Spacer(Modifier.height(8.dp))
+            SvitField(
+                value = lon,
+                onValueChange = { lon = it },
+                label = "Довгота (Open-Meteo)",
+                placeholder = "30.52",
+                keyboardType = KeyboardType.Decimal
+            )
+            Spacer(Modifier.height(10.dp))
+
+            SvitButton(
+                text = "💾 Зберегти координати",
+                modifier = Modifier.fillMaxWidth(),
+                highlighted = true,
+                onClick = {
+                    val la = lat.toDoubleOrNull()
+                    val lo = lon.toDoubleOrNull()
+                    if (lat.isNotBlank() && lon.isNotBlank() && (la == null || lo == null)) {
+                        weatherStatus = "❌ Некоректні координати"
+                        return@SvitButton
+                    }
+                    scope.launch {
+                        repo.saveLocation(lat, lon)
+                        weatherVm.load()
+                        weatherStatus = "✅ Збережено: $lat, $lon"
+                    }
+                }
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = "Авто: спершу сервер, якщо він недоступний — Open-Meteo (потрібні координати)",
+                fontSize = 11.sp,
+                lineHeight = 14.sp,
+                color = LabelGray,
+                fontFamily = JetBrainsMono
+            )
+            if (weatherStatus.isNotEmpty()) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = weatherStatus,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    color = LabelGray,
+                    fontFamily = JetBrainsMono
+                )
             }
         }
 
