@@ -27,7 +27,8 @@
 
 - Lottie-ассеты (22 шт.) → `app/src/main/assets/lottie/` + `docs/lottie-svitgrid.md`
 - Компонент `LottieArt` → `app/src/main/java/app/sunportal/ui/components/LottieArt.kt`
-- Обновление сборки (SDK 36, JVM 17, Compose plugin, `libs.versions.toml`) — совпало
-  с версией в репозитории, дублировать не пришлось
+- Обновление сборки (SDK 36, JVM 17, Compose plugin, `libs.versions.toml`) — **не совпало**
+  с репозиторием: в `main` оставался SDK 34 / Kotlin 1.9.24 / Gradle 8.7.
+  Перенесено отдельным PR: `feat/build-sdk36-kotlin2` (PR #2) — требует SDK 36 на ПК.
 - Open-Meteo → `model/OpenMeteo.kt`, `api/OpenMeteoApi.kt`, `api/OpenMeteoClient.kt`
 - Общие хелперы UI → `ui/components/Components.kt`
