@@ -128,10 +128,14 @@ fun BatteryScreen(vm: LiveViewModel = viewModel()) {
             }
         }
 
-        // Health section — remaining capacity
+        // Health section — остаток ёмкости + накопленные заряд/разряд
         val remainingKwh = d?.battery_remaining_kwh
+        val chargeTotal = d?.battery_charge_total
+        val dischargeTotal = d?.battery_discharge_total
 
-        if (remainingKwh != null && remainingKwh > 0f) {
+        if ((remainingKwh != null && remainingKwh > 0f) ||
+            chargeTotal != null || dischargeTotal != null
+        ) {
             SvitgridCard(modifier = Modifier.fillMaxWidth()) {
                 Column(
                     modifier = Modifier.padding(16.dp).fillMaxWidth(),
@@ -145,7 +149,38 @@ fun BatteryScreen(vm: LiveViewModel = viewModel()) {
                             verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
                             Text("Залишок", color = LabelGray, fontSize = 12.sp, fontFamily = JetBrainsMono)
-                            Text("${String.format("%.1f", remainingKwh)} kWh", fontWeight = FontWeight.Bold, fontSize = 18.sp, fontFamily = JetBrainsMono)
+                            Text(
+                                text = if (remainingKwh != null && remainingKwh > 0f)
+                                    "${String.format("%.1f", remainingKwh)} kWh"
+                                else "—",
+                                fontWeight = FontWeight.Bold, fontSize = 18.sp, fontFamily = JetBrainsMono
+                            )
+                        }
+                        if (chargeTotal != null) {
+                            Column(
+                                modifier = Modifier.weight(1f).fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Text("Заряджено", color = LabelGray, fontSize = 12.sp, fontFamily = JetBrainsMono)
+                                Text(
+                                    text = "${String.format("%.2f", chargeTotal)} kWh",
+                                    fontWeight = FontWeight.Bold, fontSize = 18.sp, fontFamily = JetBrainsMono
+                                )
+                            }
+                        }
+                        if (dischargeTotal != null) {
+                            Column(
+                                modifier = Modifier.weight(1f).fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Text("Розряджено", color = LabelGray, fontSize = 12.sp, fontFamily = JetBrainsMono)
+                                Text(
+                                    text = "${String.format("%.2f", dischargeTotal)} kWh",
+                                    fontWeight = FontWeight.Bold, fontSize = 18.sp, fontFamily = JetBrainsMono
+                                )
+                            }
                         }
                     }
                 }

@@ -19,5 +19,7 @@ data class LiveData(
     val pv_peak_today: Float? = 0f,
     val p_gen: Float? = 0f,                // генератор (Вт)
     val p_smart_load: Float? = 0f,         // смарт-нагрузка (Вт)
-    val grid_voltage_l1: Float? = null     // напряжение сети, V (если API отдаёт)
+    val grid_voltage_l1: Float? = null,    // напряжение сети, V (если API отдаёт)
+    val battery_charge_total: Float? = null,    // заряжено за всё время, кВт·год
+    val battery_discharge_total: Float? = null  // разряжено за всё время, кВт·год
 )
