@@ -25,6 +25,8 @@ import app.sunportal.ui.components.LottieArt
 import app.sunportal.ui.components.LottieArtView
 import app.sunportal.ui.live.LiveViewModel
 import app.sunportal.ui.theme.JetBrainsMono
+import kotlin.math.abs
+import kotlin.math.floor
 
 @Composable
 fun BatteryScreen(vm: LiveViewModel = viewModel()) {
@@ -183,6 +185,39 @@ fun BatteryScreen(vm: LiveViewModel = viewModel()) {
                             }
                         }
                     }
+                }
+            }
+        }
+
+        // Оценка резерва: остаток ёмкости ÷ текущая нагрузка
+        val reserveKwh = d?.battery_remaining_kwh ?: 0f
+        val loadW = abs(d?.p_load ?: 0f)
+        if (reserveKwh > 0f && loadW > 1f) {
+            val hours = reserveKwh * 1000f / loadW
+            val h = floor(hours).toInt()
+            val m = ((hours - h) * 60f).toInt()
+            val days = hours / 24f
+            val reserveText = when {
+                hours < 1 -> "≈ ${(hours * 60f).toInt()} хв"
+                hours < 48 -> "≈ $h год $m хв"
+                days < 5f -> "≈ ${String.format("%.1f", days)} дня"
+                else -> "≈ ${String.format("%.1f", days)} днів"
+            }
+            SvitgridCard(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text("Резерв живлення", fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = JetBrainsMono)
+                    Text(
+                        text = reserveText,
+                        fontWeight = FontWeight.Bold, fontSize = 24.sp, fontFamily = JetBrainsMono,
+                        color = Color(0xFF2ECC71)
+                    )
+                    Text(
+                        text = "при навантаженні ${String.format("%.0f", loadW)} Вт",
+                        color = LabelGray, fontSize = 12.sp, fontFamily = JetBrainsMono
+                    )
                 }
             }
         }
