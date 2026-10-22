@@ -43,7 +43,7 @@ class WeatherViewModel : ViewModel() {
     }
 
     /**
-     * Погода с Open-Meteo — резервный источник, когда сервер SunPilot недоступен.
+     * Погода с Open-Meteo — резервный источник, когда сервер SunPortal недоступен.
      * Координаты передаются вручную: сервер SunPortal их не отдаёт.
      */
     fun loadOpenMeteo(latitude: Double, longitude: Double) {
