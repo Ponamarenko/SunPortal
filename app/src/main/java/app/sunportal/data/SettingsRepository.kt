@@ -24,6 +24,7 @@ class SettingsRepository(ctx: Context) {
     private val KEY_WEATHER_LAT = stringPreferencesKey("weather_lat")
     private val KEY_WEATHER_LON = stringPreferencesKey("weather_lon")
     private val KEY_WEATHER_SOURCE = stringPreferencesKey("weather_source")
+    private val KEY_CACHE_LIVE = stringPreferencesKey("cache_live_json")
 
     private val defaultFont = "medium"
     private val defaultPadding = "12.dp"
@@ -57,6 +58,9 @@ class SettingsRepository(ctx: Context) {
 
     /** Источник погоды: "auto" (сервер, иначе Open-Meteo), "server", "openmeteo". */
     val weatherSource: Flow<String> = context.dataStore.data.map { it[KEY_WEATHER_SOURCE] ?: WEATHER_SOURCE_AUTO }
+
+    /** Последние успешно полученные данные станции (JSON) — для офлайн-режима. */
+    val liveCache: Flow<String> = context.dataStore.data.map { it[KEY_CACHE_LIVE] ?: "" }
 
     suspend fun saveServer(ip: String, port: String) {
         context.dataStore.edit { prefs ->
@@ -99,6 +103,13 @@ class SettingsRepository(ctx: Context) {
     suspend fun saveWeatherSource(source: String) {
         context.dataStore.edit { prefs ->
             prefs[KEY_WEATHER_SOURCE] = source
+        }
+    }
+
+    /** Сохранить последний успешный ответ сервера (JSON) — показывать при потере связи. */
+    suspend fun saveLiveCache(json: String) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_CACHE_LIVE] = json
         }
     }
 }

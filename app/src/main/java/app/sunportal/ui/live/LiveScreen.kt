@@ -54,10 +54,10 @@ fun LiveScreen(vm: LiveViewModel = viewModel()) {
             .padding(16.dp)
     ) {
         when {
-            state.loading -> {
+            state.loading && state.data == null -> {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
-            state.error != null -> {
+            state.error != null && state.data == null -> {
                 Text(
                     "Помилка: ${state.error}",
                     color = Color.Red,
@@ -65,6 +65,7 @@ fun LiveScreen(vm: LiveViewModel = viewModel()) {
                 )
             }
             else -> {
+                // При недоступном сервере state.data — последние сохранённые данные
                 state.data?.let { d -> InverterScheme(d) }
             }
         }
@@ -81,6 +82,8 @@ fun LiveScreen(vm: LiveViewModel = viewModel()) {
 fun LiveTopBar(onMenu: () -> Unit) {
     val weatherVm: WeatherViewModel = viewModel()
     val weatherState by weatherVm.state.collectAsState()
+    val liveVm: LiveViewModel = viewModel()
+    val liveState by liveVm.uiState.collectAsState()
     val cur = weatherState.data?.current
     val view = LocalView.current
     var fullscreen by remember { mutableStateOf(false) }
@@ -108,6 +111,14 @@ fun LiveTopBar(onMenu: () -> Unit) {
                             color = LabelGray
                         )
                     }
+                }
+                if (liveState.offline) {
+                    // Сервер недоступен — показаны последние сохранённые данные
+                    Text(
+                        text = "⚠️ Немає зв'язку — останні дані",
+                        fontSize = 11.sp,
+                        color = Color(0xFFFFA726)
+                    )
                 }
             }
         },
