@@ -1,5 +1,8 @@
 package app.sunportal.ui.tou
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,12 +12,20 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.sunportal.ui.common.LabelGray
+import app.sunportal.ui.common.SvitScreenBg
+import app.sunportal.ui.common.SvitgridCard
+import app.sunportal.ui.theme.GridColor
+import app.sunportal.ui.theme.JetBrainsMono
+import app.sunportal.ui.theme.PVColor
 
 private data class SlotEdit(
     val index: Int,
@@ -25,6 +36,11 @@ private data class SlotEdit(
     val gen: Boolean
 )
 
+/**
+ * TOU (индекс 7) в стиле Svitgrid:
+ * тёмный фон, карточки SvitgridCard (градиент #131A24 → #0A0D12, скругление 18.dp),
+ * шрифт JetBrains Mono, слоты — отдельные карточки.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TouScreen(vm: TouViewModel = viewModel()) {
@@ -34,18 +50,35 @@ fun TouScreen(vm: TouViewModel = viewModel()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(SvitScreenBg)
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("⚡ TOU (Time of Use)", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text(
+            text = "⚡ TOU (Time of Use)",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = JetBrainsMono,
+            color = Color.White
+        )
 
         if (state.loading) {
             CircularProgressIndicator()
         } else if (state.error != null) {
-            Text("Помилка: ${state.error}", color = Color.Red)
+            Text(
+                text = "Помилка: ${state.error}",
+                color = Color.Red,
+                fontFamily = JetBrainsMono
+            )
         } else state.data?.let { d ->
-            Text("Оновлено: ${d.updated}", fontSize = 12.sp, color = Color.Gray)
+            Text(
+                text = "Оновлено: ${d.updated}",
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+                color = LabelGray,
+                fontFamily = JetBrainsMono
+            )
 
             val slotEdits = remember(d) {
                 mutableStateListOf<SlotEdit>().apply {
@@ -64,125 +97,250 @@ fun TouScreen(vm: TouViewModel = viewModel()) {
                 }
             }
 
-            // Кожен слот — окрема картка
+            // --- СЛОТЫ ---
             slotEdits.forEachIndexed { i, edit ->
                 // Кінець слота = час наступного (останній замикається на перший)
                 val endTime = slotEdits.getOrNull(i + 1)?.time ?: slotEdits.first().time
 
-                Card(
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("#${edit.index}", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                SvitgridCard(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "#${edit.index}",
+                            fontSize = 16.sp,
+                            lineHeight = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = JetBrainsMono,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "${edit.time} – $endTime",
+                            fontSize = 14.sp,
+                            lineHeight = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = JetBrainsMono,
+                            color = PVColor
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+
+                    // Початок / Кінець — только чтение
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SvitField(
+                            value = edit.time,
+                            onValueChange = { },
+                            label = "Початок",
+                            modifier = Modifier.weight(1f),
+                            enabled = false
+                        )
+                        SvitField(
+                            value = endTime,
+                            onValueChange = { },
+                            label = "Кінець",
+                            modifier = Modifier.weight(1f),
+                            enabled = false
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+
+                    // Потужність / SOC
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SvitField(
+                            value = edit.power,
+                            onValueChange = { v -> slotEdits[i] = edit.copy(power = v) },
+                            label = "Потужність, Вт",
+                            modifier = Modifier.weight(1f),
+                            keyboardType = KeyboardType.Number
+                        )
+                        SvitField(
+                            value = edit.soc,
+                            onValueChange = { v -> slotEdits[i] = edit.copy(soc = v) },
+                            label = "SOC, %",
+                            modifier = Modifier.weight(1f),
+                            keyboardType = KeyboardType.Number
+                        )
+                    }
+                    Spacer(Modifier.height(10.dp))
+
+                    // Мережа / Генератор
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                "${edit.time} – $endTime",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.primary
+                                text = "Мережа",
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp,
+                                color = LabelGray,
+                                fontFamily = JetBrainsMono
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Switch(
+                                checked = edit.grid,
+                                onCheckedChange = { v -> slotEdits[i] = edit.copy(grid = v) }
                             )
                         }
-
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
-                                value = edit.time,
-                                onValueChange = { },
-                                label = { Text("Початок", fontSize = 10.sp) },
-                                modifier = Modifier.weight(1f),
-                                singleLine = true,
-                                enabled = false
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "Генератор",
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp,
+                                color = LabelGray,
+                                fontFamily = JetBrainsMono
                             )
-                            OutlinedTextField(
-                                value = endTime,
-                                onValueChange = { },
-                                label = { Text("Кінець", fontSize = 10.sp) },
-                                modifier = Modifier.weight(1f),
-                                singleLine = true,
-                                enabled = false
+                            Spacer(Modifier.width(6.dp))
+                            Switch(
+                                checked = edit.gen,
+                                onCheckedChange = { v -> slotEdits[i] = edit.copy(gen = v) }
                             )
-                        }
-
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
-                                value = edit.power,
-                                onValueChange = { v -> slotEdits[i] = edit.copy(power = v) },
-                                label = { Text("Потужність, Вт") },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                modifier = Modifier.weight(1f)
-                            )
-                            OutlinedTextField(
-                                value = edit.soc,
-                                onValueChange = { v -> slotEdits[i] = edit.copy(soc = v) },
-                                label = { Text("SOC, %") },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Мережа", fontSize = 14.sp)
-                                Spacer(Modifier.width(4.dp))
-                                Switch(
-                                    checked = edit.grid,
-                                    onCheckedChange = { v -> slotEdits[i] = edit.copy(grid = v) }
-                                )
-                            }
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Генератор", fontSize = 14.sp)
-                                Spacer(Modifier.width(4.dp))
-                                Switch(
-                                    checked = edit.gen,
-                                    onCheckedChange = { v -> slotEdits[i] = edit.copy(gen = v) }
-                                )
-                            }
                         }
                     }
                 }
             }
 
-            Text("Дні тижня: ${d.days.joinToString(", ")}", fontSize = 12.sp, color = Color.Gray)
-            Text("Статус: ${if (d.enabled) "✅ Увімкнено" else "❌ Вимкнено"}", fontSize = 12.sp, color = Color.Gray)
+            // --- СТАТУС ---
+            Text(
+                text = "Дні тижня: ${d.days.joinToString(", ")}",
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+                color = LabelGray,
+                fontFamily = JetBrainsMono
+            )
+            Text(
+                text = "Статус: ${if (d.enabled) "✅ Увімкнено" else "❌ Вимкнено"}",
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+                color = if (d.enabled) PVColor else GridColor,
+                fontFamily = JetBrainsMono
+            )
 
             if (status.isNotEmpty()) {
-                Text(status, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary)
+                Text(
+                    text = status,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    color = PVColor,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = JetBrainsMono
+                )
             }
 
+            // --- КНОПКИ ---
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(
+                SvitButton(
+                    text = "🔄 Прочитати",
+                    modifier = Modifier.weight(1f),
+                    highlighted = true,
                     onClick = {
                         status = "✅ Перечитано з сервера"
                         vm.loadData()
-                    },
-                    modifier = Modifier.weight(1f)
-                ) { Text("🔄 Прочитати") }
-
-                Button(
-                    onClick = {},
+                    }
+                )
+                SvitButton(
+                    text = "💾 Записати",
+                    modifier = Modifier.weight(1f),
+                    highlighted = false,
                     enabled = false,
-                    modifier = Modifier.weight(1f)
-                ) { Text("💾 Записати") }
+                    onClick = { }
+                )
             }
 
-            Text("Пресети:", fontSize = 13.sp, color = Color.Gray)
+            // --- ПРЕСЕТЫ ---
+            Text(
+                text = "Пресети:",
+                fontSize = 13.sp,
+                lineHeight = 17.sp,
+                color = LabelGray,
+                fontFamily = JetBrainsMono
+            )
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("Blackout", "Від прогнозу", "Зима", "Весна", "Літо", "Осінь").forEach { preset ->
-                    OutlinedButton(
+                    SvitButton(
+                        text = preset,
+                        highlighted = false,
+                        textSize = 12,
                         onClick = { status = "Пресет «$preset» вибрано (збереження ще не реалізовано)" }
-                    ) { Text(preset, fontSize = 13.sp) }
+                    )
                 }
             }
         }
+    }
+}
+
+/** Поле ввода в стиле Svitgrid: подпись и значение JetBrains Mono. */
+@Composable
+private fun SvitField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    keyboardType: KeyboardType = KeyboardType.Text
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        singleLine = true,
+        enabled = enabled,
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        label = {
+            Text(
+                text = label,
+                fontSize = 12.sp,
+                fontFamily = JetBrainsMono
+            )
+        },
+        textStyle = MaterialTheme.typography.bodyMedium.copy(
+            fontFamily = JetBrainsMono,
+            fontSize = 12.sp
+        )
+    )
+}
+
+/** Кнопка в стиле Svitgrid: тёмный фон, жёлтая (highlighted) или серая рамка. */
+@Composable
+private fun SvitButton(
+    text: String,
+    modifier: Modifier = Modifier,
+    highlighted: Boolean = false,
+    enabled: Boolean = true,
+    textSize: Int = 14,
+    onClick: () -> Unit
+) {
+    val borderColor = when {
+        !enabled -> Color.White.copy(alpha = 0.12f)
+        highlighted -> PVColor
+        else -> Color.White.copy(alpha = 0.25f)
+    }
+    val textColor = when {
+        !enabled -> LabelGray
+        highlighted -> PVColor
+        else -> Color.White
+    }
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(Color.White.copy(alpha = if (enabled) 0.06f else 0.03f))
+            .border(1.dp, borderColor, RoundedCornerShape(10.dp))
+            .clickable(enabled = enabled) { onClick() }
+            .padding(horizontal = 14.dp, vertical = 11.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            fontSize = textSize.sp,
+            lineHeight = (textSize + 4).sp,
+            fontWeight = FontWeight.Bold,
+            color = textColor,
+            fontFamily = JetBrainsMono,
+            textAlign = TextAlign.Center,
+            maxLines = 1
+        )
     }
 }
