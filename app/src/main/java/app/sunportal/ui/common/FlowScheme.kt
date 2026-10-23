@@ -297,8 +297,8 @@ fun FlowScheme(
                 val gl = hypot((invPos.x - genPos.x).toDouble(), (invPos.y - genPos.y).toDouble()).toFloat()
                 val gux = (invPos.x - genPos.x) / gl
                 val guy = (invPos.y - genPos.y) / gl
-                val genTrim = 8.dp.toPx()
-                val genStart = Offset((genPos.x + gux * genTrim).value, (genPos.y + guy * genTrim).value)
+                val genTrim = 8f
+                val genStart = Offset(genPos.x + gux * genTrim, genPos.y + guy * genTrim)
                 val genEnd = Offset(invPos.x - gux * genTrim, invPos.y - guy * genTrim)
                 drawFlowLine(genStart, genEnd, true, GeneratorColor, strokeWidthPx)
                 drawFlowDots(genStart, genEnd, GeneratorColor, genProgress, dotRadiusPx)
@@ -310,7 +310,7 @@ fun FlowScheme(
                 val sl = hypot((smartPos.x - invPos.x).toDouble(), (smartPos.y - invPos.y).toDouble()).toFloat()
                 val sux = (smartPos.x - invPos.x) / sl
                 val suy = (smartPos.y - invPos.y) / sl
-                val smartTrim = 8.dp.toPx()
+                val smartTrim = 8f
                 val smStart = Offset(invPos.x + sux * smartTrim, invPos.y + suy * smartTrim)
                 val smEnd = Offset(smartPos.x - sux * smartTrim, smartPos.y - suy * smartTrim)
                 drawFlowLine(smStart, smEnd, true, SmartLoadColor, strokeWidthPx)
@@ -577,15 +577,17 @@ private fun PvColumn(
             fontWeight = FontWeight.Bold,
             maxLines = 1
         )
-        // Подпись под панелью: сколько Ват вырабатывает (как в оригинале Svitgrid)
-        Text(
-            text = "${"%.0f".format(power)} Вт",
-            color = PVColor,
-            fontSize = 9.sp,
-            fontFamily = JetBrainsMono,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1
-        )
+        // Панель с подписью мощности (W)
+        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = "${"%.0f".format(power)} Вт",
+                color = PVColor,
+                fontSize = 9.sp,
+                fontFamily = JetBrainsMono,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
+        }
     }
 }
 
