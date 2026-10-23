@@ -323,8 +323,10 @@ private fun BlackoutBanner(text: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0x33FFAD00), RoundedCornerShape(8.dp))
-            .padding(horizontal = 10.dp, vertical = 6.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0x33FFAD00))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(

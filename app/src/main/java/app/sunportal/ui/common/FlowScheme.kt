@@ -297,7 +297,7 @@ fun FlowScheme(
                 val gl = hypot((invPos.x - genPos.x).toDouble(), (invPos.y - genPos.y).toDouble()).toFloat()
                 val gux = (invPos.x - genPos.x) / gl
                 val guy = (invPos.y - genPos.y) / gl
-                val genTrim = (smallNodeSize.value * 0.4f + 4).dp
+                val genTrim = smallNodeSize * 0.4f + 4.dp
                 val genStart = Offset(genPos.x + gux * genTrim, genPos.y + guy * genTrim)
                 val genEnd = Offset(invPos.x - gux * genTrim, invPos.y - guy * genTrim)
                 drawFlowLine(genStart, genEnd, true, GeneratorColor, strokeWidthPx)
@@ -310,7 +310,7 @@ fun FlowScheme(
                 val sl = hypot((smartPos.x - invPos.x).toDouble(), (smartPos.y - invPos.y).toDouble()).toFloat()
                 val sux = (smartPos.x - invPos.x) / sl
                 val suy = (smartPos.y - invPos.y) / sl
-                val smartTrim = (smallNodeSize.value * 0.4f + 4).dp
+                val smartTrim = smallNodeSize * 0.4f + 4.dp
                 val smStart = Offset(invPos.x + sux * smartTrim, invPos.y + suy * smartTrim)
                 val smEnd = Offset(smartPos.x - sux * smartTrim, smartPos.y - suy * smartTrim)
                 drawFlowLine(smStart, smEnd, true, SmartLoadColor, strokeWidthPx)
