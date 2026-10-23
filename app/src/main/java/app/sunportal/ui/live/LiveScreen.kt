@@ -33,6 +33,7 @@ import app.sunportal.model.BlackoutResponse
 import app.sunportal.model.BlackoutSlot
 import app.sunportal.model.LiveData
 import app.sunportal.model.householdById
+import app.sunportal.ui.theme.JetBrainsMono
 import app.sunportal.ui.common.BatteryStatusLine
 import app.sunportal.ui.common.FlowScheme
 import app.sunportal.ui.common.LabelGray

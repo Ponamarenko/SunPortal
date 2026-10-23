@@ -784,7 +784,7 @@ private fun SchemeNode(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (badgeRes != null) {
                     // Иконка типа домовладения (Svitgrid)
-        // Panel illustration removed for build
+                    Image(
                         painter = painterResource(badgeRes),
                         contentDescription = null,
                         modifier = Modifier.size(badgeSize)
