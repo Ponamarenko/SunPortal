@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,6 +32,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.sunportal.model.BlackoutResponse
 import app.sunportal.model.BlackoutSlot
 import app.sunportal.model.LiveData
+import app.sunportal.model.householdById
 import app.sunportal.ui.common.BatteryStatusLine
 import app.sunportal.ui.common.FlowScheme
 import app.sunportal.ui.common.LabelGray
@@ -91,6 +94,9 @@ fun LiveTopBar(onMenu: () -> Unit) {
     val weatherState by weatherVm.state.collectAsState()
     val liveVm: LiveViewModel = viewModel()
     val liveState by liveVm.uiState.collectAsState()
+    // Тип домовладения — иконка + название в шапке главной
+    val householdId by liveVm.householdType.collectAsState()
+    val household = householdById(householdId)
     val cur = weatherState.data?.current
     val view = LocalView.current
     var fullscreen by remember { mutableStateOf(false) }
@@ -100,12 +106,27 @@ fun LiveTopBar(onMenu: () -> Unit) {
     TopAppBar(
         title = {
             Column {
-                Text(
-                    text = "HOME",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 2.sp
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "HOME",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 2.sp
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    // Иконка и название типа домовладения — контекст главной
+                    Image(
+                        painter = painterResource(household.iconRes),
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(5.dp))
+                    Text(
+                        text = household.title,
+                        fontSize = 10.sp,
+                        color = LabelGray
+                    )
+                }
                 if (cur != null) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
