@@ -178,7 +178,15 @@ fun TouScreen(
                     }
                     Spacer(Modifier.height(10.dp))
 
-                    // Мережа / Генератор
+                    // Мережа / Генератор — Switch в стиле Svitgrid
+                    val svitSwitchColors = SwitchDefaults.colors(
+                        checkedThumbColor = PVColor,
+                        checkedTrackColor = PVColor.copy(alpha = 0.5f),
+                        checkedBorderColor = PVColor.copy(alpha = 0.6f),
+                        uncheckedThumbColor = LabelGray,
+                        uncheckedTrackColor = Color.White.copy(alpha = 0.1f),
+                        uncheckedBorderColor = Color.White.copy(alpha = 0.25f)
+                    )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -195,7 +203,8 @@ fun TouScreen(
                             Spacer(Modifier.width(6.dp))
                             Switch(
                                 checked = edit.grid,
-                                onCheckedChange = { v -> slotEdits[i] = edit.copy(grid = v) }
+                                onCheckedChange = { v -> slotEdits[i] = edit.copy(grid = v) },
+                                colors = svitSwitchColors
                             )
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -209,7 +218,8 @@ fun TouScreen(
                             Spacer(Modifier.width(6.dp))
                             Switch(
                                 checked = edit.gen,
-                                onCheckedChange = { v -> slotEdits[i] = edit.copy(gen = v) }
+                                onCheckedChange = { v -> slotEdits[i] = edit.copy(gen = v) },
+                                colors = svitSwitchColors
                             )
                         }
                     }

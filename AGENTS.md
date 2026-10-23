@@ -122,15 +122,27 @@ git status
 Инструкция по установке всех зависимостей (JDK 21, Android SDK 34/36, Build-Tools,
 Platform-Tools, Git, GitHub CLI) и сборка/релиз: `docs/PC-DEPENDENCIES.md`.
 
+Тулчейн проекта (на 1.0.4): **compileSdk/targetSdk 36**, **minSdk 26**,
+**Kotlin 2.0.21** (+ Compose compiler plugin), **AGP 8.7.3**, **Gradle 8.9**,
+**jvmTarget 17**, JDK 21. Для сборки нужны `platforms;android-36` и
+`build-tools;36.0.0` в SDK — без платформы 36 Gradle падает на `compileSdk 36`.
+
 Gradle не стартует из-под PowerShell без явного `JAVA_HOME`. Используй `build_now.bat` в корне проекта:
 
 ```bat
 C:\Users\xAnder\AndroidProjects\SunPortal\build_now.bat
 ```
 
-Он выставляет `JAVA_HOME=C:\Users\xAnder\.jdks\jbr-21.0.11` (JDK 21) и запускает `.\gradlew.bat --no-daemon assembleDebug`.
+Он выставляет `JAVA_HOME=C:\Users\xAnder\.jdks\jbr-21.0.11` (JDK 21, Kotlin 2.0.21)
+и запускает `.\gradlew.bat --no-daemon assembleDebug`.
 
 Для `clean assembleDebug` — тот же bat с заменой задачи на `clean assembleDebug`.
+
+APK после сборки: `app\build\outputs\apk\debug\app-debug.apk`.
+Проверка версии в APK: `aapt2 dump badging app\build\outputs\apk\debug\app-debug.apk`.
+
+**CI:** `.github/workflows/build-apk.yml` собирает debug APK при push в `main`
+и создаёт GitHub Release по тегу `v*` (без локальной сборки).
 
 ## ОТЛАДКА ADB
 
@@ -140,5 +152,8 @@ C:\Users\xAnder\AndroidProjects\SunPortal\build_now.bat
 
 ## ВЕРСИИ ПРИЛОЖЕНИЯ
 
-Текущая: `versionCode = 3`, `versionName = "1.0.2"` (после bump от 1.0.1).
-Версия поднимается при каждой пересборке с новым функционалом; GitHub Release создаётся по тегу `vX.Y.Z`.
+Текущая: `versionCode = 5`, `versionName = "1.0.4"` (SDK 36 / Kotlin 2.0.21).
+Теги/релизы: `v1.0.2`, `v1.0.3`, `v1.0.4` (Latest).
+Версия поднимается при каждой пересборке с новым функционалом; GitHub Release
+создаётся по тегу `vX.Y.Z`. Если релиз уже существует, APK заменяется:
+`gh release upload vX.Y.Z app\build\outputs\apk\debug\app-debug.apk --clobber`.
