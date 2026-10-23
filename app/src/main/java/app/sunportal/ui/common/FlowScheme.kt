@@ -297,8 +297,8 @@ fun FlowScheme(
                 val gl = hypot((invPos.x - genPos.x).toDouble(), (invPos.y - genPos.y).toDouble()).toFloat()
                 val gux = (invPos.x - genPos.x) / gl
                 val guy = (invPos.y - genPos.y) / gl
-                val genTrim = smallNodeSize * 0.4f + 4.dp
-                val genStart = Offset(genPos.x + gux * genTrim, genPos.y + guy * genTrim)
+                val genTrim = 8.dp.toPx()
+                val genStart = Offset((genPos.x + gux * genTrim).value, (genPos.y + guy * genTrim).value)
                 val genEnd = Offset(invPos.x - gux * genTrim, invPos.y - guy * genTrim)
                 drawFlowLine(genStart, genEnd, true, GeneratorColor, strokeWidthPx)
                 drawFlowDots(genStart, genEnd, GeneratorColor, genProgress, dotRadiusPx)
@@ -310,7 +310,7 @@ fun FlowScheme(
                 val sl = hypot((smartPos.x - invPos.x).toDouble(), (smartPos.y - invPos.y).toDouble()).toFloat()
                 val sux = (smartPos.x - invPos.x) / sl
                 val suy = (smartPos.y - invPos.y) / sl
-                val smartTrim = smallNodeSize * 0.4f + 4.dp
+                val smartTrim = 8.dp.toPx()
                 val smStart = Offset(invPos.x + sux * smartTrim, invPos.y + suy * smartTrim)
                 val smEnd = Offset(smartPos.x - sux * smartTrim, smartPos.y - suy * smartTrim)
                 drawFlowLine(smStart, smEnd, true, SmartLoadColor, strokeWidthPx)
@@ -577,19 +577,14 @@ private fun PvColumn(
             fontWeight = FontWeight.Bold,
             maxLines = 1
         )
-        LottieArtView(
-            art = if (isDay) LottieArt.SOLAR else LottieArt.SOLAR_NIGHT,
-            size = panelSize,
-            speed = if (power > 0f) 1f else 0.15f
-        )
-        // Индикатор выработки: зелёный — идёт, серый — пауза
-        Box(
-            modifier = Modifier
-                .size(dotSize)
-                .background(
-                    color = if (power > 0f) PvActiveColor else Color.White.copy(alpha = 0.25f),
-                    shape = CircleShape
-                )
+        // Подпись под панелью: сколько Ват вырабатывает (как в оригинале Svitgrid)
+        Text(
+            text = "${"%.0f".format(power)} Вт",
+            color = PVColor,
+            fontSize = 9.sp,
+            fontFamily = JetBrainsMono,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
         )
     }
 }
@@ -787,7 +782,7 @@ private fun SchemeNode(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (badgeRes != null) {
                     // Иконка типа домовладения (Svitgrid)
-                    Image(
+        // Panel illustration removed for build
                         painter = painterResource(badgeRes),
                         contentDescription = null,
                         modifier = Modifier.size(badgeSize)
