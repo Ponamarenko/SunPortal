@@ -7,6 +7,9 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.pointerInput
+
+import androidx.compose.ui.gesture.detectTapGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -21,6 +24,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -94,6 +98,7 @@ fun SvitgridCard(
  * @param weatherCode текущий код погоды WMO — выбор варианта дома
  * @param windSpeed скорость ветра, м/с — при сильном ветре дом «ветреный»
  * @param householdId тип домовладения (иконка Svitgrid) — показывается в узле «Дом»
+ * @param onNodeClick клик на узел → (String) — id узла (batt/grid/home/inv/pv1/pv2/pv3)
  */
 @Composable
 fun FlowScheme(
@@ -102,7 +107,8 @@ fun FlowScheme(
     compact: Boolean = false,
     weatherCode: Int? = null,
     windSpeed: Float? = null,
-    householdId: String? = null
+    householdId: String? = null,
+    onNodeClick: ((String) -> Unit)? = null
 ) {
     val hour = LocalTime.now().hour
     val isDay = hour >= 6 && hour < 20
@@ -165,8 +171,8 @@ fun FlowScheme(
             )
         }
 
-        // --- Толщина линий передачи: тонкие и аккуратные (как в Svitgrid) ---
-        val wireWidth = if (compact) 0.8.dp else 1.2.dp
+        // --- Толщина линий передачи: пунктир 1.5.dp (как в Svitgrid) ---
+        val wireWidth = if (compact) 1.5.dp else 1.5.dp
         val dotRadius = if (compact) 2.dp else 2.5.dp
         val arrowSize = if (compact) 5.dp else 6.dp
 
@@ -218,6 +224,7 @@ fun FlowScheme(
         val smartPos = px(density, smartX, smartY)
 
         // --- Фон: линии + бегущие точки + стрелки у конца ---
+        val dashPathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 6f))
         Canvas(modifier = Modifier.fillMaxSize()) {
             val strokeWidthPx = wireWidth.toPx()     // тонкие линии передачи
             val dotRadiusPx = dotRadius.toPx()        // мелкие бегущие точки
@@ -232,13 +239,14 @@ fun FlowScheme(
                 start = busLeft,
                 end = busRight,
                 strokeWidth = strokeWidthPx,
-                cap = StrokeCap.Round
+                cap = StrokeCap.Round,
+                pathEffect = dashPathEffect
             )
             // отводы: панель → шина (с бегущими точками, если есть выработка)
             pvColXs.forEach { cx ->
                 val top = px(density, cx, pvRowH)
                 val bot = px(density, cx, busY)
-                drawFlowLine(top, bot, pvPower > 0f, PVColor, strokeWidthPx)
+                drawFlowLine(top, bot, pvPower > 0f, PVColor, strokeWidthPx, dashPathEffect)
                 if (pvPower > 0f) {
                     drawFlowDots(top, bot, PVColor, pvProgress, dotRadiusPx)
                 }
@@ -258,7 +266,7 @@ fun FlowScheme(
                 if (invTopY - 6.dp >= busY + 16.dp) invTopY - 6.dp else busY + 16.dp
             val busInvTop = px(density, w * 0.50f, busY)
             val busInvBottom = px(density, w * 0.50f, busInvEndY)
-            drawFlowLine(busInvTop, busInvBottom, pvPower > 0f, PVColor, strokeWidthPx)
+            drawFlowLine(busInvTop, busInvBottom, pvPower > 0f, PVColor, strokeWidthPx, dashPathEffect)
             if (pvPower > 0f) {
                 drawFlowDots(busInvTop, busInvBottom, PVColor, pvProgress, dotRadiusPx)
                 // стрелка только если отрезок не слишком короткий (иначе прячется под иконкой)
@@ -270,7 +278,7 @@ fun FlowScheme(
             // 2) Батарея ↔ Инвертор (горизонтальная; направление по знаку p_batt)
             val battStart = if (battPower > 0f) battLineLeft else battLineRight
             val battEnd = if (battPower > 0f) battLineRight else battLineLeft
-            drawFlowLine(battStart, battEnd, abs(battPower) > 0f, BatteryColor, strokeWidthPx)
+            drawFlowLine(battStart, battEnd, abs(battPower) > 0f, BatteryColor, strokeWidthPx, dashPathEffect)
             if (abs(battPower) > 0f) {
                 drawFlowDots(battStart, battEnd, BatteryColor, battProgress, dotRadiusPx)
                 drawFlowArrow(battStart, battEnd, BatteryColor, arrowSizePx)
@@ -279,14 +287,14 @@ fun FlowScheme(
             // 3) Сеть ↔ Инвертор (горизонтальная; направление по знаку p_grid)
             val gridStart = if (gridPower > 0f) gridLineRight else gridLineLeft
             val gridEnd = if (gridPower > 0f) gridLineLeft else gridLineRight
-            drawFlowLine(gridStart, gridEnd, abs(gridPower) > 0f, GridColor, strokeWidthPx)
+            drawFlowLine(gridStart, gridEnd, abs(gridPower) > 0f, GridColor, strokeWidthPx, dashPathEffect)
             if (abs(gridPower) > 0f) {
                 drawFlowDots(gridStart, gridEnd, GridColor, gridProgress, dotRadiusPx)
                 drawFlowArrow(gridStart, gridEnd, GridColor, arrowSizePx)
             }
 
             // 4) Инвертор → Дом (вертикальная, сверху вниз)
-            drawFlowLine(homeLineTop, homeLineBottom, loadPower > 0f, LoadColor, strokeWidthPx)
+            drawFlowLine(homeLineTop, homeLineBottom, loadPower > 0f, LoadColor, strokeWidthPx, dashPathEffect)
             if (loadPower > 0f) {
                 drawFlowDots(homeLineTop, homeLineBottom, LoadColor, loadProgress, dotRadiusPx)
                 drawFlowArrow(homeLineTop, homeLineBottom, LoadColor, arrowSizePx)
@@ -300,7 +308,7 @@ fun FlowScheme(
                 val genTrim = 8f
                 val genStart = Offset(genPos.x + gux * genTrim, genPos.y + guy * genTrim)
                 val genEnd = Offset(invPos.x - gux * genTrim, invPos.y - guy * genTrim)
-                drawFlowLine(genStart, genEnd, true, GeneratorColor, strokeWidthPx)
+                drawFlowLine(genStart, genEnd, true, GeneratorColor, strokeWidthPx, dashPathEffect)
                 drawFlowDots(genStart, genEnd, GeneratorColor, genProgress, dotRadiusPx)
                 drawFlowArrow(genStart, genEnd, GeneratorColor, arrowSizePx)
             }
@@ -313,7 +321,7 @@ fun FlowScheme(
                 val smartTrim = 8f
                 val smStart = Offset(invPos.x + sux * smartTrim, invPos.y + suy * smartTrim)
                 val smEnd = Offset(smartPos.x - sux * smartTrim, smartPos.y - suy * smartTrim)
-                drawFlowLine(smStart, smEnd, true, SmartLoadColor, strokeWidthPx)
+                drawFlowLine(smStart, smEnd, true, SmartLoadColor, strokeWidthPx, dashPathEffect)
                 drawFlowDots(smStart, smEnd, SmartLoadColor, smartProgress, dotRadiusPx)
                 drawFlowArrow(smStart, smEnd, SmartLoadColor, arrowSizePx)
             }
@@ -354,7 +362,8 @@ fun FlowScheme(
                     captionSize = pvCaptionSize,
                     valueSize = pvValueSize,
                     captionLine = pvCaptionLine,
-                    valueLine = pvValueLine
+                    valueLine = pvValueLine,
+                    onNodeClick = onNodeClick
                 )
             }
         }
@@ -364,7 +373,12 @@ fun FlowScheme(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .offset(x = invX - invSize * 0.5f, y = invY - invSize * 0.5f)
-                .size(invSize),
+                .size(invSize)
+                .pointerInput(Unit) {
+                    onNodeClick?.let { cb ->
+                        detectTapGestures(onTap = { cb("inv") })
+                    }
+                },
             contentAlignment = Alignment.Center
         ) {
             LottieArtView(art = LottieArt.INVERTER, size = invSize)
@@ -376,6 +390,7 @@ fun FlowScheme(
                 .align(Alignment.TopStart)
                 .offset(x = battX - battColW * 0.5f, y = battY - nodeSize * 0.5f),
             columnWidth = battColW,
+            clickKey = "batt",
             lottieArt = LottieArt.BATTERY,
             lottieSize = nodeSize,
             valueText = "${battPower.toInt()} Вт",
@@ -398,6 +413,7 @@ fun FlowScheme(
                 .align(Alignment.TopStart)
                 .offset(x = gridX - gridColW * 0.5f, y = gridY - nodeSize * 0.5f),
             columnWidth = gridColW,
+            clickKey = "grid",
             lottieArt = if (isDay) LottieArt.TRANSFORMER else LottieArt.TRANSFORMER_NIGHT,
             lottieSize = nodeSize,
             valueText = "${gridPower.toInt()} Вт",
@@ -419,6 +435,7 @@ fun FlowScheme(
                 .align(Alignment.TopStart)
                 .offset(x = homeX - homeColW * 0.5f, y = homeNodeTop),
             columnWidth = homeColW,
+            clickKey = "home",
             lottieArt = houseArtFor(weatherCode, isDay, windSpeed),
             lottieSize = homeSize,
             valueText = "${loadPower.toInt()} Вт",
@@ -443,6 +460,7 @@ fun FlowScheme(
                     .align(Alignment.TopStart)
                     .offset(x = genX - smallColW * 0.5f, y = genY - smallNodeSize * 0.5f),
                 columnWidth = smallColW,
+                clickKey = "gen",
                 lottieArt = LottieArt.GENERATOR,
                 lottieSize = smallNodeSize,
                 valueText = "${genPower.toInt()} Вт",
@@ -466,6 +484,7 @@ fun FlowScheme(
                     .align(Alignment.TopStart)
                     .offset(x = smartX - smallColW * 0.5f, y = smartY - smallNodeSize * 0.5f),
                 columnWidth = smallColW,
+                clickKey = "smart",
                 lottieArt = LottieArt.SMART_LOAD,
                 lottieSize = smallNodeSize,
                 valueText = "${smartPower.toInt()} Вт",
@@ -554,10 +573,17 @@ private fun PvColumn(
     captionSize: TextUnit,
     valueSize: TextUnit,
     captionLine: TextUnit,
-    valueLine: TextUnit
+    valueLine: TextUnit,
+    onNodeClick: ((String) -> Unit)? = null
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .pointerInput(Unit) {
+                if (onNodeClick != null) {
+                    detectTapGestures(onTap = { onNodeClick("pv$index") })
+                }
+            },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
@@ -616,7 +642,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFlowLine(
     end: Offset,
     active: Boolean,
     color: Color,
-    strokeWidthPx: Float
+    strokeWidthPx: Float,
+    pathEffect: PathEffect? = null
 ) {
     // неактивная линия — приглушённый серый (аккуратнее, чем яркий серый)
     val lineColor = if (active) color else Color.Gray.copy(alpha = 0.35f)
@@ -625,7 +652,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFlowLine(
         start = start,
         end = end,
         strokeWidth = strokeWidthPx,
-        cap = StrokeCap.Round
+        cap = StrokeCap.Round,
+        pathEffect = pathEffect
     )
 }
 
@@ -707,6 +735,7 @@ private fun houseArtFor(weatherCode: Int?, isDay: Boolean, windSpeed: Float?): L
 @Composable
 private fun SchemeNode(
     modifier: Modifier = Modifier,
+    clickKey: String? = null,
     columnWidth: Dp,
     lottieArt: LottieArt? = null,
     lottieSize: Dp,
@@ -726,7 +755,13 @@ private fun SchemeNode(
     color: Color
 ) {
     Column(
-        modifier = modifier.width(columnWidth),
+        modifier = modifier
+            .width(columnWidth)
+            .pointerInput(Unit) {
+                if (clickKey != null) {
+                    detectTapGestures(onTap = { onNodeClick?.invoke(clickKey) })
+                }
+            },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         if (lottieArt != null) {

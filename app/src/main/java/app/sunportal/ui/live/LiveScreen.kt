@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,13 +35,17 @@ import app.sunportal.model.BlackoutSlot
 import app.sunportal.model.LiveData
 import app.sunportal.model.householdById
 import app.sunportal.ui.theme.JetBrainsMono
+import app.sunportal.ui.theme.PVColor
+import app.sunportal.ui.theme.BatteryColor
+import app.sunportal.ui.theme.GridColor
 import app.sunportal.ui.common.BatteryStatusLine
 import app.sunportal.ui.common.FlowScheme
 import app.sunportal.ui.common.LabelGray
+import app.sunportal.ui.common.buildGridStatus
 import app.sunportal.ui.notifications.Notifier
 import app.sunportal.ui.overview.BlackoutViewModel
 import app.sunportal.ui.overview.WeatherViewModel
-import app.sunportal.ui.theme.JetBrainsMono
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -53,6 +58,7 @@ import java.time.temporal.ChronoUnit
 fun LiveScreen(vm: LiveViewModel = viewModel()) {
     val state by vm.uiState.collectAsState()
     val householdId by vm.householdType.collectAsState()
+    var selectedNodeState by rememberSaveable { mutableStateOf<String?>(null) }
 
     Box(
         modifier = Modifier
@@ -76,8 +82,15 @@ fun LiveScreen(vm: LiveViewModel = viewModel()) {
                 )
             }
             else -> {
-                // При недоступном сервере state.data — последние сохранённые данные
-                state.data?.let { d -> InverterScheme(d, householdId) }
+                // При недоступном сервері state.data — останні збережені дані
+                state.data?.let { d ->
+                    InverterScheme(
+                        d = d,
+                        householdId = householdId,
+                        onNodeClick = { selectedNodeState.value = it },
+                        selectedNode = selectedNodeState
+                    )
+                }
             }
         }
     }
@@ -373,17 +386,23 @@ private fun activeBlackoutText(resp: BlackoutResponse?): String? {
 
 /**
  * Live: таймлайн суток + плашка блекаута + статус батареи,
- * ниже — общая схема потоков (ui/common/FlowScheme.kt, та же, что в Overview).
+ * ниже — общая схема потоков (ui/common/FlowScheme.kt, та же, що в Overview),
+ * нижче — ряд статистики (Сьогодні / Всього) та модальна панель по кліку на вузол.
  */
 @Composable
-private fun InverterScheme(d: LiveData, householdId: String) {
+private fun InverterScheme(
+    d: LiveData,
+    householdId: String,
+    onNodeClick: ((String) -> Unit)? = null,
+    selectedNode: MutableState<String?>? = null
+) {
     // Блекаут (та же BlackoutViewModel, що в Overview)
     val blackoutVm: BlackoutViewModel = viewModel()
     val blackoutState by blackoutVm.state.collectAsState()
     val blackoutText = activeBlackoutText(blackoutState.data)
     val todayKey = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
     val todaySlots = blackoutState.data?.schedule?.find { it.date == todayKey }?.slots
-    
+
     // Погода над домом (ШАГ 3)
     val weatherVm: WeatherViewModel = viewModel()
     val weatherState by weatherVm.state.collectAsState()
@@ -391,7 +410,7 @@ private fun InverterScheme(d: LiveData, householdId: String) {
     val windSpeed = weatherState.data?.current?.wind
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Таймлайн суток (24 сегмента): над плашкой блекаута
+        // Таймлайн суток (24 сегмента): над плашкою блекаута
         BlackoutTimeline(todaySlots)
         if (blackoutText != null) {
             Spacer(Modifier.height(6.dp))
@@ -401,7 +420,7 @@ private fun InverterScheme(d: LiveData, householdId: String) {
         BatteryStatusLine(d)
         Spacer(Modifier.height(8.dp))
 
-        // Схема — общая для Live и Overview
+        // Схема — общая для Live і Overview
         FlowScheme(
             d = d,
             modifier = Modifier
@@ -409,7 +428,170 @@ private fun InverterScheme(d: LiveData, householdId: String) {
                 .weight(1f),
             weatherCode = weatherCode,
             windSpeed = windSpeed,
-            householdId = householdId
+            householdId = householdId,
+            onNodeClick = onNodeClick
         )
+
+        // --- Ряд статистики під схемою (Сьогодні / Всього) ---
+        StatsRow(d.pv_today, d.pv_total)
+    }
+
+    // --- Модальна панель з деталями вузла (Material3, поза Column) ---
+    val sheetState = rememberModalBottomSheetState(initialValue = ModalBottomSheetValue.Hidden)
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(selectedNode?.value) {
+        if (selectedNode?.value != null) {
+            scope.launch { sheetState.show() }
+        } else {
+            scope.launch { sheetState.hide() }
+        }
+    }
+    ModalBottomSheet(
+        onDismissRequest = { selectedNode?.value = null },
+        sheetState = sheetState
+    ) {
+        if (selectedNode?.value != null) {
+            NodeDetails(d, selectedNode.value!!)
+        }
+    }
+}
+
+/**
+ * Ряд статистики під схемою потоків: «Сьогодні» (накопичення за день) та «Всього» (накопичення на жаль).
+ * Розрахунок накопичень — PV-колонки: п.с + батарея + сім'я сім'янок / заряд / віддача.
+ */
+@Composable
+private fun StatsRow(pvToday: Float, pvTotal: Float) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        SvitgridCard(
+            modifier = Modifier.weight(1f),
+            title = "Сьогодні",
+            value = "${"%.1f".format(pvToday)} кВт",
+            accent = PVColor
+        )
+        SvitgridCard(
+            modifier = Modifier.weight(1f),
+            title = "Всього",
+            value = "${"%.1f".format(pvTotal)} кВт",
+            accent = BatteryColor
+        )
+    }
+}
+
+/**
+ * Деталі вузла (після кліку) — вміст модальної панелі Material3.
+ * Секції за type: дом, батарея, інвертор, сім'я PV-панелей, сім'я генератора/смарт-навантаження.
+ */
+@Composable
+private fun NodeDetails(d: LiveData, nodeKey: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        when (nodeKey) {
+            "home" -> {
+                Text(
+                    text = "Дом",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = JetBrainsMono,
+                    color = Color.White
+                )
+                Text(
+                    text = "Витрати: ${"%.1f".format(d.p_load)} Вт",
+                    fontSize = 13.sp,
+                    color = LabelGray,
+                    fontFamily = JetBrainsMono
+                )
+                Text(
+                    text = "Енергія: ~${"%.1f".format(d.pv_today)} кВт",
+                    fontSize = 13.sp,
+                    color = LabelGray,
+                    fontFamily = JetBrainsMono
+                )
+            }
+            "battery" -> {
+                Text(
+                    text = "Батарея",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = JetBrainsMono,
+                    color = BatteryColor
+                )
+                Text(
+                    text = "SOC: ${d.batt_soc}%",
+                    fontSize = 13.sp,
+                    color = LabelGray,
+                    fontFamily = JetBrainsMono
+                )
+                Text(
+                    text = "Напруга: ${"%.1f".format(d.battery_voltage)} В",
+                    fontSize = 13.sp,
+                    color = LabelGray,
+                    fontFamily = JetBrainsMono
+                )
+            }
+            "grid" -> {
+                Text(
+                    text = "Сім'я",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = JetBrainsMono,
+                    color = GridColor
+                )
+                Text(
+                    text = "Статус: ${buildGridStatus(d.p_grid, d.grid_voltage_l1)}",
+                    fontSize = 13.sp,
+                    color = LabelGray,
+                    fontFamily = JetBrainsMono
+                )
+            }
+            "inv" -> {
+                Text(
+                    text = "Інвертор",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = JetBrainsMono,
+                    color = PVColor
+                )
+                Text(
+                    text = "Потужність: ${"%.1f".format(d.p_gen ?: 0f)} Вт",
+                    fontSize = 13.sp,
+                    color = LabelGray,
+                    fontFamily = JetBrainsMono
+                )
+            }
+            "pv1", "pv2", "pv3" -> {
+                Text(
+                    text = "PV${if (nodeKey == "pv1") "1" else if (nodeKey == "pv2") "2" else "3"}",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = JetBrainsMono,
+                    color = PVColor
+                )
+                Text(
+                    text = "До: ${"%.1f".format(d.p_string1)} Вт",
+                    fontSize = 13.sp,
+                    color = LabelGray,
+                    fontFamily = JetBrainsMono
+                )
+            }
+            else -> {
+                Text(
+                    text = "Вузол: $nodeKey",
+                    fontSize = 16.sp,
+                    color = LabelGray,
+                    fontFamily = JetBrainsMono
+                )
+            }
+        }
     }
 }
