@@ -473,15 +473,23 @@ private fun StatsRow(pvToday: Float, pvTotal: Float) {
     ) {
         SvitgridCard(
             modifier = Modifier.weight(1f),
-            title = "Сьогодні",
-            value = "${"%.1f".format(pvToday)} кВт",
-            accent = PVColor
+            content = {
+                Column {
+                    Text("Сьогодні", fontSize = 12.sp, color = LabelGray, fontFamily = JetBrainsMono)
+                    Text("${"%.1f".format(pvToday)} кВт", fontSize = 16.sp, color = PVColor, fontWeight = FontWeight.Bold, fontFamily = JetBrainsMono)
+                }
+            },
+            corner = 18.dp
         )
         SvitgridCard(
             modifier = Modifier.weight(1f),
-            title = "Всього",
-            value = "${"%.1f".format(pvTotal)} кВт",
-            accent = BatteryColor
+            content = {
+                Column {
+                    Text("Всього", fontSize = 12.sp, color = LabelGray, fontFamily = JetBrainsMono)
+                    Text("${"%.1f".format(pvTotal)} кВт", fontSize = 16.sp, color = BatteryColor, fontWeight = FontWeight.Bold, fontFamily = JetBrainsMono)
+                }
+            },
+            corner = 18.dp
         )
     }
 }
