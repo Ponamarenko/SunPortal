@@ -69,6 +69,7 @@ fun MainScreen() {
 
     ModalNavigationDrawer(
         drawerState = drawerState,
+        gesturesEnabled = true,
         drawerContent = {
             ModalDrawerSheet {
                 Column(
