@@ -586,16 +586,11 @@ private fun PvColumn(
             fontFamily = JetBrainsMono,
             maxLines = 1
         )
-        Text(
-            text = "${"%.1f".format(power / 1000f).replace('.', ',')} кВт",
-            color = PVColor,
-            fontSize = valueSize,
-            lineHeight = valueLine,
-            fontFamily = JetBrainsMono,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1
+        LottieArtView(
+            art = LottieArt.SOLAR_PANEL,
+            size = 40.dp
         )
-        // Панель с подписью мощности (W)
+        // Панель з потужністю (лише W — без дублювання кВт)
         Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = "${"%.0f".format(power)} Вт",

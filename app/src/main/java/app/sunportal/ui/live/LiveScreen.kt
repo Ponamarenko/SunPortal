@@ -109,9 +109,6 @@ fun LiveTopBar(onMenu: () -> Unit) {
     val weatherState by weatherVm.state.collectAsState()
     val liveVm: LiveViewModel = viewModel()
     val liveState by liveVm.uiState.collectAsState()
-    // Тип домовладения — иконка + название в шапке главной
-    val householdId by liveVm.householdType.collectAsState()
-    val household = householdById(householdId)
     val cur = weatherState.data?.current
     val view = LocalView.current
     var fullscreen by remember { mutableStateOf(false) }
@@ -127,19 +124,6 @@ fun LiveTopBar(onMenu: () -> Unit) {
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 2.sp
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    // Иконка и название типа домовладения — контекст главной
-                    Image(
-                        painter = painterResource(household.iconRes),
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(Modifier.width(5.dp))
-                    Text(
-                        text = household.title,
-                        fontSize = 10.sp,
-                        color = LabelGray
                     )
                 }
                 if (cur != null) {
@@ -412,13 +396,6 @@ private fun InverterScheme(
     val windSpeed = weatherState.data?.current?.wind
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Таймлайн суток (24 сегмента): над плашкою блекаута
-        BlackoutTimeline(todaySlots)
-        if (blackoutText != null) {
-            Spacer(Modifier.height(6.dp))
-            BlackoutBanner(blackoutText)
-        }
-        Spacer(Modifier.height(6.dp))
         BatteryStatusLine(d)
         Spacer(Modifier.height(8.dp))
 
@@ -434,8 +411,6 @@ private fun InverterScheme(
             onNodeClick = onNodeClick
         )
 
-        // --- Ряд статистики під схемою (Сьогодні / Всього) ---
-        StatsRow(d.pv_today, d.pv_total)
     }
 
     // --- Модальна панель з деталями вузла (Material3, поза Column) ---
