@@ -42,6 +42,7 @@ import app.sunportal.ui.common.BatteryStatusLine
 import app.sunportal.ui.common.FlowScheme
 import app.sunportal.ui.common.LabelGray
 import app.sunportal.ui.common.buildGridStatus
+import app.sunportal.ui.common.SvitgridCard
 import app.sunportal.ui.notifications.Notifier
 import app.sunportal.ui.overview.BlackoutViewModel
 import app.sunportal.ui.overview.WeatherViewModel
@@ -58,7 +59,7 @@ import java.time.temporal.ChronoUnit
 fun LiveScreen(vm: LiveViewModel = viewModel()) {
     val state by vm.uiState.collectAsState()
     val householdId by vm.householdType.collectAsState()
-    var selectedNodeState by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedNodeState = rememberSaveable { mutableStateOf<String?>(null) }
 
     Box(
         modifier = Modifier
@@ -389,6 +390,7 @@ private fun activeBlackoutText(resp: BlackoutResponse?): String? {
  * ниже — общая схема потоков (ui/common/FlowScheme.kt, та же, що в Overview),
  * нижче — ряд статистики (Сьогодні / Всього) та модальна панель по кліку на вузол.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun InverterScheme(
     d: LiveData,
@@ -437,7 +439,7 @@ private fun InverterScheme(
     }
 
     // --- Модальна панель з деталями вузла (Material3, поза Column) ---
-    val sheetState = rememberModalBottomSheetState(initialValue = ModalBottomSheetValue.Hidden)
+    val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
     LaunchedEffect(selectedNode?.value) {
         if (selectedNode?.value != null) {

@@ -9,7 +9,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.pointerInput
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -373,11 +373,7 @@ fun FlowScheme(
                 .align(Alignment.TopStart)
                 .offset(x = invX - invSize * 0.5f, y = invY - invSize * 0.5f)
                 .size(invSize)
-                .pointerInput(Unit) {
-                    onNodeClick?.let { cb ->
-                        detectTapGestures(onTap = { cb("inv") })
-                    }
-                },
+                .clickable(onClick = { onNodeClick?.let { cb -> cb("inv") } }),
             contentAlignment = Alignment.Center
         ) {
             LottieArtView(art = LottieArt.INVERTER, size = invSize)
@@ -548,7 +544,7 @@ private fun buildBatterySub(soc: Float, voltage: Float?): String {
     return "${soc.toInt()}%$v"
 }
 
-private fun buildGridStatus(pgrid: Float, voltage: Float?): String {
+fun buildGridStatus(pgrid: Float, voltage: Float?): String {
     val status = when {
         pgrid > 0f -> "Імпорт"
         pgrid < 0f -> "Експорт"
@@ -578,11 +574,7 @@ private fun PvColumn(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .pointerInput(Unit) {
-                if (onNodeClick != null) {
-                    detectTapGestures(onTap = { onNodeClick("pv$index") })
-                }
-            },
+            .clickable(onClick = { if (onNodeClick != null) onNodeClick?.invoke("pv$index") }),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
@@ -735,6 +727,7 @@ private fun houseArtFor(weatherCode: Int?, isDay: Boolean, windSpeed: Float?): L
 private fun SchemeNode(
     modifier: Modifier = Modifier,
     clickKey: String? = null,
+    onNodeClick: ((String) -> Unit)? = null,
     columnWidth: Dp,
     lottieArt: LottieArt? = null,
     lottieSize: Dp,
@@ -756,12 +749,8 @@ private fun SchemeNode(
     Column(
         modifier = modifier
             .width(columnWidth)
-            .pointerInput(Unit) {
-                if (clickKey != null) {
-                    detectTapGestures(onTap = { onNodeClick?.invoke(clickKey) })
-                }
-            },
-        horizontalAlignment = Alignment.CenterHorizontally
+            .clickable(onClick = { onNodeClick?.invoke(clickKey) })
+            .horizontalAlignment = Alignment.CenterHorizontally
     ) {
         if (lottieArt != null) {
             // Анимация из assets/lottie (с погодными вариантами дома)
