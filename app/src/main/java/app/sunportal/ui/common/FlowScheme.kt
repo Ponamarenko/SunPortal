@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.sunportal.R
 import app.sunportal.model.LiveData
 import app.sunportal.model.householdById
 import app.sunportal.ui.components.LottieArt
@@ -586,9 +587,10 @@ private fun PvColumn(
             fontFamily = JetBrainsMono,
             maxLines = 1
         )
-        LottieArtView(
-            art = LottieArt.SOLAR_PANEL,
-            size = 40.dp
+        Image(
+            painter = painterResource(R.drawable.svit_household_solar_array),
+            contentDescription = null,
+            modifier = Modifier.size(56.dp)
         )
         // Панель з потужністю (лише W — без дублювання кВт)
         Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
