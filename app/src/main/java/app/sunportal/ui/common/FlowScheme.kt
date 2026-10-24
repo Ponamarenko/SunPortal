@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -267,9 +268,9 @@ fun FlowScheme(
                 if (invTopY - 6.dp >= busY + 16.dp) invTopY - 6.dp else busY + 16.dp
             val busInvTop = px(density, w * 0.50f, busY)
             val busInvBottom = px(density, w * 0.50f, busInvEndY)
-            drawFlowLine(busInvTop, busInvBottom, pvPower > 0f, PVColor, strokeWidthPx, dashPathEffect)
+            drawFlowLine(busInvTop, busInvBottom, pvPower > 0f, PVColor, strokeWidthPx, dashPathEffect, curved = true)
             if (pvPower > 0f) {
-                drawFlowDots(busInvTop, busInvBottom, PVColor, pvProgress, dotRadiusPx)
+                drawFlowDots(busInvTop, busInvBottom, PVColor, pvProgress, dotRadiusPx, curved = true)
                 // стрелка только если отрезок не слишком короткий (иначе прячется под иконкой)
                 if (busInvEndY - busY > 20.dp) {
                     drawFlowArrow(busInvTop, busInvBottom, PVColor, arrowSizePx)
@@ -364,6 +365,8 @@ fun FlowScheme(
                     valueSize = pvValueSize,
                     captionLine = pvCaptionLine,
                     valueLine = pvValueLine,
+                    voltage = listOf(d.pv1_voltage, d.pv2_voltage, d.pv3_voltage).getOrElse(i) { 0f },
+                    current = listOf(d.pv1_current, d.pv2_current, d.pv3_current).getOrElse(i) { 0f },
                     onNodeClick = onNodeClick
                 )
             }
@@ -571,6 +574,8 @@ private fun PvColumn(
     valueSize: TextUnit,
     captionLine: TextUnit,
     valueLine: TextUnit,
+    voltage: Float = 0f,
+    current: Float = 0f,
     onNodeClick: ((String) -> Unit)? = null
 ) {
     Column(
@@ -587,22 +592,26 @@ private fun PvColumn(
             fontFamily = JetBrainsMono,
             maxLines = 1
         )
+        Text(
+            text = if (voltage > 0f) "${voltage.toInt()} В · ${current.toInt()} А" else "— В · — А",
+            color = LabelGray,
+            fontSize = 10.sp,
+            fontFamily = JetBrainsMono,
+            maxLines = 1
+        )
         Image(
             painter = painterResource(R.drawable.svit_household_solar_array),
             contentDescription = null,
             modifier = Modifier.size(56.dp)
         )
-        // Панель з потужністю (лише W — без дублювання кВт)
-        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = "${"%.0f".format(power)} Вт",
-                color = PVColor,
-                fontSize = 9.sp,
-                fontFamily = JetBrainsMono,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1
-            )
-        }
+        Text(
+            text = "${"%.1f".format(power / 1000f).replace('.', ',')} кВт",
+            color = PVColor,
+            fontSize = 9.sp,
+            fontFamily = JetBrainsMono,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
+        )
     }
 }
 
@@ -632,18 +641,39 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFlowLine(
     active: Boolean,
     color: Color,
     strokeWidthPx: Float,
-    pathEffect: PathEffect? = null
+    pathEffect: PathEffect? = null,
+    curved: Boolean = false
 ) {
     // неактивная линия — приглушённый серый (аккуратнее, чем яркий серый)
     val lineColor = if (active) color else Color.Gray.copy(alpha = 0.35f)
-    drawLine(
-        color = lineColor,
-        start = start,
-        end = end,
-        strokeWidth = strokeWidthPx,
+    val path = Path().apply {
+        moveTo(start.x, start.y)
+        if (curved) {
+            val (c1, c2) = bezierControl(start, end)
+            cubicTo(c1.x, c1.y, c2.x, c2.y, end.x, end.y)
+        } else {
+            lineTo(end.x, end.y)
+        }
+    }
+    val stroke = Stroke(
+        width = strokeWidthPx,
         cap = StrokeCap.Round,
         pathEffect = pathEffect
     )
+    drawPath(path = path, color = lineColor, style = stroke)
+}
+
+/**
+ * Контрольные точки кривой Безье для линии PV -> инвертор
+ * (кривая с плавным "схлопыванием" от прямой линии).
+ */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.bezierControl(start: Offset, end: Offset): Pair<Offset, Offset> {
+    val bend = with(this) { 48.dp.toPx() }
+    val dx = end.x - start.x
+    val dy = end.y - start.y
+    val c1 = Offset(start.x + dx * 0.40f, start.y + dy * 0.40f + bend)
+    val c2 = Offset(end.x - dx * 0.40f, end.y - dy * 0.40f + bend)
+    return c1 to c2
 }
 
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFlowDots(
@@ -651,17 +681,32 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFlowDots(
     end: Offset,
     color: Color,
     progress: Float,
-    radiusPx: Float
+    radiusPx: Float,
+    curved: Boolean = false
 ) {
     // 3 точки со смещением 0, 0.33, 0.66
     listOf(0f, 0.33f, 0.66f).forEach { offset ->
         val t = (progress + offset) % 1f
-        val pos = Offset(
-            x = start.x + (end.x - start.x) * t,
-            y = start.y + (end.y - start.y) * t
-        )
+        val pos = if (curved) {
+            val (c1, c2) = bezierControl(start, end)
+            bezierPoint(start, c1, c2, end, t)
+        } else {
+            Offset(
+                x = start.x + (end.x - start.x) * t,
+                y = start.y + (end.y - start.y) * t
+            )
+        }
         drawCircle(color = color, radius = radiusPx, center = pos)
     }
+}
+
+/** Точка кривої Безье по параметру t (0..1). */
+private fun bezierPoint(start: Offset, c1: Offset, c2: Offset, end: Offset, t: Float): Offset {
+    val u = 1f - t
+    return Offset(
+        x = u * u * u * start.x + 3f * u * u * t * c1.x + 3f * u * t * t * c2.x + t * t * t * end.x,
+        y = u * u * u * start.y + 3f * u * u * t * c1.y + 3f * u * t * t * c2.y + t * t * t * end.y
+    )
 }
 
 /**

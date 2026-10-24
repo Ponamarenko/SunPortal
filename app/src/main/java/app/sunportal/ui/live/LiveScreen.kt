@@ -397,6 +397,18 @@ private fun InverterScheme(
 
     Column(modifier = Modifier.fillMaxSize()) {
         BatteryStatusLine(d)
+
+        // Статус батареї (ШАГ 2.5 v1.0.11): заряд/розряд потужності
+        Text(
+            text = when {
+                d.p_batt > 0f -> "Заряджається · ${kotlin.math.abs(d.p_batt).toInt()} Вт"
+                d.p_batt < 0f -> "Розряджається · ${kotlin.math.abs(d.p_batt).toInt()} Вт"
+                else -> "Очікування"
+            },
+            fontSize = 11.sp,
+            fontFamily = JetBrainsMono,
+            color = LabelGray
+        )
         Spacer(Modifier.height(8.dp))
 
         // Схема — общая для Live і Overview
