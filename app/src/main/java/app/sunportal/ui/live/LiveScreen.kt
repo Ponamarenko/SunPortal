@@ -436,11 +436,11 @@ private fun InverterScheme(
             scope.launch { sheetState.hide() }
         }
     }
-    ModalBottomSheet(
-        onDismissRequest = { selectedNode?.value = null },
-        sheetState = sheetState
-    ) {
-        if (selectedNode?.value != null) {
+    if (selectedNode?.value != null) {
+        ModalBottomSheet(
+            onDismissRequest = { selectedNode?.value = null },
+            sheetState = sheetState
+        ) {
             NodeDetails(d, selectedNode.value!!)
         }
     }
