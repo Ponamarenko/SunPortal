@@ -15,7 +15,16 @@ object RetrofitClient {
 
     fun init(context: Context) {
         val repo = SettingsRepository(context)
-        baseUrl = runBlocking { repo.serverUrl.first() }
+        // Читаем URL сервера не на main线程 — иначе чтение SharedPreferences
+        // блокирует UI и выводит систему в ANR ("Application Not Responding").
+        // Это блочит все клики, в том числе по бургеру/меню drawer.
+        val executor = java.util.concurrent.Executors.newSingleThreadExecutor()
+        executor.execute {
+            try {
+                baseUrl = runBlocking { repo.serverUrl.first() }
+            } catch (e: Exception) { /* оставляем默认地址 */ }
+            executor.shutdown()
+        }
     }
 
     fun updateBaseUrl(newUrl: String) {
