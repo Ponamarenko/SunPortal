@@ -1,5 +1,6 @@
 package app.sunportal
 
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -139,12 +140,12 @@ fun MainScreen() {
             topBar = {
                 if (selectedTab == 0) {
                     // Live: шапка в стиле Svitgrid — HOME + погода + колокольчик + fullscreen
-                    LiveTopBar(onMenu = { scope.launch { drawerState.open() } })
+                    LiveTopBar(onMenu = { Log.d("Drawer", "open() called"); scope.launch { drawerState.open() } })
                 } else {
                     TopAppBar(
                         title = { Text(tabs[selectedTab].title) },
                         navigationIcon = {
-                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            IconButton(onClick = { Log.d("Drawer", "open() called"); scope.launch { drawerState.open() } }) {
                                 Icon(Icons.Default.Menu, contentDescription = "Меню")
                             }
                         }

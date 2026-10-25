@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import android.util.Log
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -165,7 +166,7 @@ fun LiveTopBar(onMenu: () -> Unit) {
             }
         },
         navigationIcon = {
-            IconButton(onClick = onMenu) {
+            IconButton(onClick = { Log.d("Drawer", "open() called"); onMenu() }) {
                 Icon(Icons.Default.Menu, contentDescription = "Меню")
             }
         },
