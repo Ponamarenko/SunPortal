@@ -1,7 +1,13 @@
 package app.sunportal.ui.common
 
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -11,7 +17,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +25,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -41,11 +47,7 @@ import app.sunportal.model.LiveData
 import app.sunportal.model.householdById
 import app.sunportal.ui.components.LottieArt
 import app.sunportal.ui.components.LottieArtView
-import app.sunportal.ui.theme.BatteryColor
-import app.sunportal.ui.theme.GridColor
-import app.sunportal.ui.theme.JetBrainsMono
-import app.sunportal.ui.theme.LoadColor
-import app.sunportal.ui.theme.PVColor
+import app.sunportal.ui.theme.*
 import java.time.LocalTime
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -53,24 +55,33 @@ import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
 
-// --- Общие цвета/константы схемы (используются Live и Overview) ---
+// --- Точная цветовая схема SvitGrid ---
 
+// Основные цвета из SvitGrid
 val LabelGray = Color(0xB3FFFFFF)        // серый для подписей
-val GeneratorColor = Color(0xFFFF9800)   // #FF9800 — генератор
-val SmartLoadColor = Color(0x9C27B0)   // #9C27B0 — смарт-нагрузка
+val GeneratorColor = Color(0xFFFF9800)   // генератор - оранжевый
+val SmartLoadColor = Color(0xFF9C27B0)   // умная нагрузка - фиолетовый
 
-/** Зелёный индикатор выработки PV (как в Svitgrid). */
+/** Зелёный индикатор выработки PV (точный цвет SvitGrid). */
 val PvActiveColor = Color(0xFF00A326)
 
-/** Усиленные визуальные эффекты для SvitGrid стиля */
-val GlowEffect = Color(0x40FFFFFF) // Полупрозрачный белый для свечения
-val ShadowEffect = Color(0x20000000) // Тень для глубины
-
-/** Тёмная палитра Svitgrid: фон экрана и градиент карточек #131A24 → #0A0D12. */
+/** Точная тёмная палитра SvitGrid: фон экрана и градиент карточек #131A24 → #0A0D12. */
 val SvitScreenBg = Color(0xFF0A0D12)
 val SvitCardTop = Color(0xFF131A24)
 val SvitCardBottom = Color(0xFF0A0D12)
 val SvitCardGradient = listOf(SvitCardTop, SvitCardBottom)
+
+// Усиленные визуальные эффекты для SvitGrid стиля
+val GlowEffect = Color(0x40FFFFFF)        // Полупрозрачный белый для свечения
+val ShadowEffect = Color(0x20000000)      // Тень для глубины
+val ActiveGlow = Color(0x40FFFFFF)        // Свечение для активных элементов
+val InactiveGray = Color(0xFF808080)      // Неактивный серый
+
+// Цвета для статусов
+val StatusOnline = Color(0xFF4CAF50)       // Онлайн - зеленый
+val StatusOffline = Color(0xFFFF9800)      // Оффлайн - оранжевый
+val StatusError = Color(0xFFF44336)        // Ошибка - красный
+val StatusWarning = Color(0xFFFFC107)      // Предупреждение - желтый
 
 /** Ёмкость батареи, кВт·ч (2 × 16, см. AboutScreen) */
 private const val BATTERY_CAPACITY_KWH = 32f
@@ -583,6 +594,20 @@ private fun PvColumn(
     current: Float = 0f,
     onNodeClick: ((String) -> Unit)? = null
 ) {
+    val active = power > 0f
+    val targetAlpha = if (active) 0.15f else 0.05f
+    val targetBorderAlpha = if (active) 0.4f else 0.1f
+    
+    // Анимация для активных состояний
+    val alpha by animateFloatAsState(
+        targetValue = targetAlpha,
+        animationSpec = tween(300)
+    )
+    val borderAlpha by animateFloatAsState(
+        targetValue = targetBorderAlpha,
+        animationSpec = tween(300)
+    )
+    
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -590,45 +615,59 @@ private fun PvColumn(
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        PVColor.copy(alpha = 0.1f),
-                        PVColor.copy(alpha = 0.05f)
+                        PVColor.copy(alpha = alpha),
+                        PVColor.copy(alpha = alpha.times(0.5f))
                     )
                 ),
-                RoundedCornerShape(8.dp)
+                RoundedCornerShape(12.dp)
             )
             .border(
                 1.dp,
-                PVColor.copy(alpha = 0.3f),
-                RoundedCornerShape(8.dp)
+                PVColor.copy(alpha = borderAlpha),
+                RoundedCornerShape(12.dp)
+            )
+            .shadow(
+                elevation = if (active) 4.dp else 0.dp,
+                shape = RoundedCornerShape(12.dp),
+                ambientColor = PVColor.copy(alpha = 0.2f),
+                spotColor = PVColor.copy(alpha = 0.1f)
             ),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Заголовок PV
         Text(
             text = "PV$index",
-            color = PVColor,
-            fontSize = captionSize,
-            lineHeight = captionLine,
-            fontFamily = JetBrainsMono,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1
+            style = SvitCardTitleStyle,
+            color = if (active) PVColor else PVColor.copy(alpha = 0.6f),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 8.dp)
         )
+        
+        // Напряжение и ток
         Text(
             text = if (voltage > 0f) "${voltage.toInt()} В · ${current.toInt()} А" else "— В · — А",
+            style = SvitLabelStyle,
             color = LabelGray,
-            fontSize = 10.sp,
-            fontFamily = JetBrainsMono,
-            maxLines = 1
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 2.dp)
         )
+        
+        // Панель PV с анимацией
         Box(
             modifier = Modifier
                 .size(panelSize)
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            PVColor.copy(alpha = 0.1f),
-                            PVColor.copy(alpha = 0.05f)
+                            PVColor.copy(alpha = alpha * 0.8f),
+                            PVColor.copy(alpha = alpha * 0.4f)
                         )
                     ),
+                    RoundedCornerShape(panelSize * 0.1f)
+                )
+                .border(
+                    1.dp,
+                    PVColor.copy(alpha = borderAlpha * 0.5f),
                     RoundedCornerShape(panelSize * 0.1f)
                 )
         ) {
@@ -639,24 +678,33 @@ private fun PvColumn(
                     .size(panelSize * 0.9f)
                     .align(Alignment.Center)
             )
-            // Индикатор активности
-            if (power > 0f) {
+            
+            // Индикатор активности с пульсацией
+            if (active) {
+                val pulse by animateFloatAsState(
+                    targetValue = 1f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(1000, easing = LinearEasing),
+                        repeatMode = RepeatMode.Reverse
+                    )
+                )
+                
                 Box(
                     modifier = Modifier
-                        .size(dotSize)
+                        .size(dotSize * pulse)
                         .background(PvActiveColor, CircleShape)
                         .align(Alignment.BottomEnd)
                 )
             }
         }
+        
+        // Мощность
         Text(
             text = "${"%.1f".format(power / 1000f).replace('.', ',')} кВт",
-            color = PVColor,
-            fontSize = valueSize,
-            lineHeight = valueLine,
-            fontFamily = JetBrainsMono,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1
+            style = SvitValueStyle,
+            color = if (active) PVColor else PVColor.copy(alpha = 0.6f),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
         )
     }
 }
@@ -692,6 +740,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFlowLine(
 ) {
     // неактивная линия — приглушённый серый (аккуратнее, чем яркий серый)
     val lineColor = if (active) color else Color.Gray.copy(alpha = 0.35f)
+    
     val path = Path().apply {
         moveTo(start.x, start.y)
         if (curved) {
@@ -701,11 +750,30 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFlowLine(
             lineTo(end.x, end.y)
         }
     }
+    
     val stroke = Stroke(
         width = strokeWidthPx,
         cap = StrokeCap.Round,
         pathEffect = pathEffect
     )
+    
+    // Для активных линий добавляем эффект свечения в стиле SvitGrid
+    if (active && color != Color.Gray) {
+        // Внешнее свечение
+        drawPath(
+            path = path,
+            color = color.copy(alpha = 0.1f),
+            style = Stroke(strokeWidthPx * 3f, cap = StrokeCap.Round, pathEffect = pathEffect)
+        )
+        // Среднее свечение
+        drawPath(
+            path = path,
+            color = color.copy(alpha = 0.2f),
+            style = Stroke(strokeWidthPx * 1.8f, cap = StrokeCap.Round, pathEffect = pathEffect)
+        )
+    }
+    
+    // Основная линия
     drawPath(path = path, color = lineColor, style = stroke)
 }
 
@@ -730,8 +798,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFlowDots(
     radiusPx: Float,
     curved: Boolean = false
 ) {
-    // 5 точек с разными размерами для лучшей визуализации
-    listOf(0f, 0.25f, 0.5f, 0.75f, 1f).forEach { offset ->
+    // 7 точек с разными размерами и эффектом пульсации для SvitGrid стиля
+    listOf(0f, 0.16f, 0.33f, 0.5f, 0.66f, 0.83f, 1f).forEach { offset ->
         val t = (progress + offset) % 1f
         val pos = if (curved) {
             val (c1, c2) = bezierControl(start, end)
@@ -742,12 +810,41 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFlowDots(
                 y = start.y + (end.y - start.y) * t
             )
         }
+        
+        // Пульсация для активных линий
+        val pulse = if (color != Color.Gray) {
+            val pulseProgress = (progress * 3f + offset) % 1f
+            1f + sin(pulseProgress * Math.PI.toFloat()) * 0.3f
+        } else 1f
+        
         // Точки с разным размером для эффекта движения
-        val size = radiusPx * (1.2f - abs(t - 0.5f) * 0.4f) // Центральные точки крупнее
+        val size = radiusPx.times(pulse).times(1.3f - abs(t - 0.5f).times(0.4f)) // Центральные точки крупнее
+        
+        // Основная точка
         drawCircle(color = color, radius = size, center = pos)
-        // Добавляем свечение для активных линий
+        
+        // Свечение для активных линий (эффект SvitGrid)
         if (color != Color.Gray) {
-            drawCircle(color = color.copy(alpha = 0.3f), radius = size * 1.5f, center = pos)
+            drawCircle(
+                color = color.copy(alpha = 0.4f),
+                radius = size * 1.8f,
+                center = pos
+            )
+            drawCircle(
+                color = color.copy(alpha = 0.2f),
+                radius = size * 2.5f,
+                center = pos
+            )
+        }
+        
+        // Дополнительная точка для эффекта следа
+        if (color != Color.Gray && offset != 0f && offset != 1f) {
+            val trailSize = size * 0.6f
+            drawCircle(
+                color = color.copy(alpha = 0.3f),
+                radius = trailSize,
+                center = pos
+            )
         }
     }
 }
@@ -774,7 +871,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFlowArrow(
     drawFlowArrowAt(atan2(end.y - start.y, end.x - start.x), end, color, sizePx)
 }
 
-/** Треугольник-стрелка по известному углу направления (angle, tip). */
+/** Треугольник-стрелка по известному углу направления (angle, tip) - стиль SvitGrid. */
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFlowArrowAt(
     angle: Float,
     tip: Offset,
@@ -784,8 +881,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFlowArrowAt(
     val ux = cos(angle); val uy = sin(angle)
 
     val base = Offset(tip.x - ux * sizePx, tip.y - uy * sizePx)
-    // перпендикуляр к направлению — половина основания
-    val halfBase = sizePx * 0.6f
+    // перпендикуляр к направлению — увеличенное основание для SvitGrid стиля
+    val halfBase = sizePx * 0.7f
     val left = Offset(base.x - uy * halfBase, base.y + ux * halfBase)
     val right = Offset(base.x + uy * halfBase, base.y - ux * halfBase)
 
@@ -795,10 +892,26 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFlowArrowAt(
         lineTo(right.x, right.y)
         close()
     }
-    // Стрелка с контуром для лучшей видимости
-    drawPath(path = path, color = color)
+    
+    // Стрелка с эффектом свечения для SvitGrid стиля
     if (color != Color.Gray) {
-        drawPath(path = path, color = color.copy(alpha = 0.3f), style = Stroke(2f))
+        // Внешнее свечение
+        drawPath(
+            path = path,
+            color = color.copy(alpha = 0.2f),
+            style = Stroke(sizePx * 1.5f)
+        )
+        // Основная стрелка
+        drawPath(path = path, color = color)
+        // Внутреннее свечение
+        drawPath(
+            path = path,
+            color = color.copy(alpha = 0.4f),
+            style = Stroke(1f)
+        )
+    } else {
+        // Неактивная стрелка
+        drawPath(path = path, color = color)
     }
 }
 
@@ -843,8 +956,22 @@ private fun SchemeNode(
     labelLine: TextUnit = TextUnit.Unspecified,
     badgeRes: Int? = null,
     badgeSize: Dp = 18.dp,
-    color: Color
+    color: Color,
+    active: Boolean = true
 ) {
+    val targetAlpha = if (active) 0.15f else 0.05f
+    val targetBorderAlpha = if (active) 0.4f else 0.1f
+    
+    // Анимация для активных состояний
+    val alpha by animateFloatAsState(
+        targetValue = targetAlpha,
+        animationSpec = tween(300)
+    )
+    val borderAlpha by animateFloatAsState(
+        targetValue = targetBorderAlpha,
+        animationSpec = tween(300)
+    )
+    
     Column(
         modifier = modifier
             .width(columnWidth)
@@ -852,16 +979,22 @@ private fun SchemeNode(
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        color.copy(alpha = 0.1f),
-                        color.copy(alpha = 0.05f)
+                        color.copy(alpha = alpha),
+                        color.copy(alpha = alpha.times(0.5f))
                     )
                 ),
-                RoundedCornerShape(8.dp)
+                RoundedCornerShape(12.dp)
             )
             .border(
                 1.dp,
-                color.copy(alpha = 0.3f),
-                RoundedCornerShape(8.dp)
+                color.copy(alpha = borderAlpha),
+                RoundedCornerShape(12.dp)
+            )
+            .shadow(
+                elevation = if (active) 4.dp else 0.dp,
+                shape = RoundedCornerShape(12.dp),
+                ambientColor = color.copy(alpha = 0.2f),
+                spotColor = color.copy(alpha = 0.1f)
             ),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -873,16 +1006,22 @@ private fun SchemeNode(
                     .background(
                         Brush.verticalGradient(
                             listOf(
-                                color.copy(alpha = 0.1f),
-                                color.copy(alpha = 0.05f)
+                                color.copy(alpha = alpha.times(0.8f)),
+                                color.copy(alpha = alpha.times(0.4f))
                             )
                         ),
+                        RoundedCornerShape(lottieSize * 0.1f)
+                    )
+                    .border(
+                        1.dp,
+                        color.copy(alpha = borderAlpha * 0.5f),
                         RoundedCornerShape(lottieSize * 0.1f)
                     )
             ) {
                 LottieArtView(
                     art = lottieArt,
-                    size = lottieSize * 0.9f
+                    size = lottieSize * 0.9f,
+                    speed = if (active) 1f else 0.5f
                 )
             }
         } else {
@@ -893,55 +1032,59 @@ private fun SchemeNode(
                     .background(
                         Brush.verticalGradient(
                             listOf(
-                                color.copy(alpha = 0.1f),
-                                color.copy(alpha = 0.05f)
+                                color.copy(alpha = alpha),
+                                color.copy(alpha = alpha.times(0.5f))
                             )
                         ),
                         RoundedCornerShape(lottieSize * 0.1f)
                     )
             )
         }
+        
+        // Значение узла
         if (valueText != null) {
             Text(
                 text = valueText,
-                color = color,
-                fontSize = valueSize,
-                lineHeight = valueLine,
-                fontFamily = JetBrainsMono,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
+                style = if (active) SvitValueStyle else SvitValueStyle.copy(color = color.copy(alpha = 0.6f)),
+                color = if (active) color else color.copy(alpha = 0.6f),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 4.dp)
             )
         }
+        
+        // Дополнительный текст
         if (subText != null) {
             Text(
                 text = subText,
-                color = Color.White,
-                fontSize = subSize,
-                lineHeight = subLine,
-                fontFamily = JetBrainsMono,
+                style = SvitSubValueStyle,
+                color = if (active) Color.White else Color.White.copy(alpha = 0.6f),
                 textAlign = TextAlign.Center
             )
         }
+        
+        // Дополнительная информация
         if (extraText != null) {
             Text(
                 text = extraText,
+                style = SvitLabelStyle,
                 color = LabelGray,
-                fontSize = labelSize,
-                lineHeight = labelLine,
-                fontFamily = JetBrainsMono,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 2.dp)
             )
         }
+        
+        // Малый текст (статус)
         if (smallText != null) {
             Text(
                 text = smallText,
-                color = LabelGray,
-                fontSize = labelSize,
-                lineHeight = labelLine,
-                fontFamily = JetBrainsMono,
-                textAlign = TextAlign.Center
+                style = SvitLabelStyle,
+                color = if (active) LabelGray else LabelGray.copy(alpha = 0.5f),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 2.dp)
             )
         }
+        
+        // Подпись и бейдж
         if (labelText != null || badgeRes != null) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -949,13 +1092,14 @@ private fun SchemeNode(
                     .background(
                         Brush.verticalGradient(
                             listOf(
-                                color.copy(alpha = 0.1f),
-                                color.copy(alpha = 0.05f)
+                                color.copy(alpha = alpha.times(0.6f)),
+                                color.copy(alpha = alpha.times(0.3f))
                             )
                         ),
-                        RoundedCornerShape(4.dp)
+                        RoundedCornerShape(6.dp)
                     )
                     .padding(horizontal = 8.dp, vertical = 4.dp)
+                    .padding(top = 4.dp)
             ) {
                 if (badgeRes != null) {
                     // Иконка типа домовладения (Svitgrid)
@@ -969,10 +1113,8 @@ private fun SchemeNode(
                 if (labelText != null) {
                     Text(
                         text = labelText,
-                        color = LabelGray,
-                        fontSize = labelSize,
-                        lineHeight = labelLine,
-                        fontFamily = JetBrainsMono,
+                        style = SvitLabelStyle,
+                        color = if (active) LabelGray else LabelGray.copy(alpha = 0.5f),
                         textAlign = TextAlign.Center
                     )
                 }
