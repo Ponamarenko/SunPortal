@@ -33,3 +33,9 @@ wait_dev.bat
 check_log.bat
 shot_fc.bat
 get_kt_sizes.bat
+
+# Артефакты сборки/IDE
+/.kotlin/
+
+# Дампы скриншотов (124 файла, 49 МБ) — не хранить в репозитории
+/screenshots/
