@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace = "app.sunportal"
-    compileSdk = 36
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "app.sunportal"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 34
         versionCode = 17
         versionName = "1.0.16"
 
