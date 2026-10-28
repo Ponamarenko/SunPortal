@@ -6,14 +6,14 @@ plugins {
 
 android {
     namespace = "app.sunportal"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "app.sunportal"
         minSdk = 26
-        targetSdk = 34
-        versionCode = 19
-        versionName = "1.0.18"
+        targetSdk = 36
+        versionCode = 20
+        versionName = "1.0.19"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -58,7 +58,7 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
 
-    // Networking & data layer
+    // Networking & data layer - обновленные версии
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("com.google.code.gson:gson:2.11.0")
@@ -72,8 +72,12 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.8.5")
     implementation("androidx.compose.material:material-icons-extended:1.7.6")
 
-    // Settings storage
-    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    // Settings storage - обновленная версия
+    implementation("androidx.datastore:datastore-preferences:1.2.0")
+    
+    // Advanced analytics and charts
+    implementation("androidx.lifecycle:lifecycle-process:2.8.7")
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

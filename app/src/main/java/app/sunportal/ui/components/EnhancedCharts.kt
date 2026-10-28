@@ -1,0 +1,409 @@
+package app.sunportal.ui.components
+
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.material3.MaterialTheme
+import app.sunportal.ui.theme.*
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
+
+/**
+ * Улучшенный компонент графика с анимацией
+ */
+@Composable
+fun AnimatedLineChart(
+    data: List<Float>,
+    title: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+    height: Dp = 200.dp,
+    showGrid: Boolean = true,
+    animated: Boolean = true
+) {
+    val animatedData by remember(data) {
+        mutableStateOf(List(data.size) { 0f })
+    }
+    
+    LaunchedEffect(data) {
+        data.forEachIndexed { index, value ->
+            if (animated) {
+                kotlinx.coroutines.delay(index * 100L)
+            }
+            animatedData[index] = value
+        }
+    }
+    
+    SvitgridGlowCard(
+        modifier = modifier,
+        corner = 16.dp,
+        glowColor = color,
+        content = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                // Заголовок
+                Text(
+                    text = title,
+                    style = SvitCardTitleStyle,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                Spacer(Modifier.height(16.dp))
+                
+                // График
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(height)
+                ) {
+                    // Сетка
+                    if (showGrid) {
+                        DrawGrid()
+                    }
+                    
+                    // Линия графика
+                    DrawLineChart(
+                        data = animatedData,
+                        color = color,
+                        height = height
+                    )
+                }
+            }
+        }
+    )
+}
+
+/**
+ * Компонент столбчатой диаграммы
+ */
+@Composable
+fun AnimatedBarChart(
+    data: List<Float>,
+    labels: List<String>,
+    title: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+    height: Dp = 200.dp,
+    animated: Boolean = true
+) {
+    val maxValue = data.maxOrNull() ?: 1f
+    val animatedData by remember(data) {
+        mutableStateOf(List(data.size) { 0f })
+    }
+    
+    LaunchedEffect(data) {
+        data.forEachIndexed { index, value ->
+            if (animated) {
+                kotlinx.coroutines.delay(index * 100L)
+            }
+            animatedData[index] = value
+        }
+    }
+    
+    SvitgridGlowCard(
+        modifier = modifier,
+        corner = 16.dp,
+        glowColor = color,
+        content = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                // Заголовок
+                Text(
+                    text = title,
+                    style = SvitCardTitleStyle,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                Spacer(Modifier.height(16.dp))
+                
+                // Диаграмма
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(height)
+                ) {
+                    // Столбцы
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        animatedData.forEachIndexed { index, value ->
+                            val barHeight = (value / maxValue) * (height - 20.dp)
+                            Box(
+                                modifier = Modifier
+                                    .width(30.dp)
+                                    .height(barHeight.coerceAtLeast(10.dp))
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(
+                                                color,
+                                                color.copy(alpha = 0.7f)
+                                            )
+                                        ),
+                                        RoundedCornerShape(4.dp)
+                                    )
+                                    .border(
+                                        1.dp,
+                                        color.copy(alpha = 0.3f),
+                                        RoundedCornerShape(4.dp)
+                                    )
+                            )
+                            
+                            // Метки
+                            if (index < labels.size) {
+                                Text(
+                                    text = labels[index],
+                                    style = SvitLabelStyle,
+                                    color = Color.Gray,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    )
+}
+
+/**
+ * Рисование сетки для графика
+ */
+private fun DrawScope.DrawGrid() {
+    val gridColor = Color.Gray.copy(alpha = 0.2f)
+    
+    // Горизонтальные линии
+    repeat(5) { i ->
+        val y = size.height * (i + 1) / 6f
+        drawLine(
+            color = gridColor,
+            start = Offset(0f, y),
+            end = Offset(size.width, y),
+            strokeWidth = 1f
+        )
+    }
+    
+    // Вертикальные линии
+    repeat(7) { i ->
+        val x = size.width * (i + 1) / 8f
+        drawLine(
+            color = gridColor,
+            start = Offset(x, 0f),
+            end = Offset(x, size.height),
+            strokeWidth = 1f
+        )
+    }
+}
+
+/**
+ * Рисование линии графика
+ */
+private fun DrawScope.DrawLineChart(
+    data: List<Float>,
+    color: Color,
+    height: Dp
+) {
+    if (data.size < 2) return
+    
+    val maxValue = data.maxOrNull() ?: 1f
+    val stepX = size.width / (data.size - 1)
+    
+    val path = Path().apply {
+        data.forEachIndexed { index, value ->
+            val x = index * stepX.toFloat()
+            val y = size.height - (value / maxValue) * size.height
+            if (index == 0) {
+                moveTo(x, y)
+            } else {
+                lineTo(x, y)
+            }
+        }
+    }
+    
+    // Линия графика
+    drawPath(
+        path = path,
+        color = color,
+        style = Stroke(width = 3f)
+    )
+    
+    // Точки данных
+    data.forEachIndexed { index, value ->
+        val x = index * stepX.toFloat()
+        val y = size.height - (value / maxValue) * size.height
+        
+        // Точка
+        drawCircle(
+            color = color,
+            radius = 6f,
+            center = Offset(x, y)
+        )
+        
+        // Свечение точки
+        drawCircle(
+            color = color.copy(alpha = 0.3f),
+            radius = 12f,
+            center = Offset(x, y)
+        )
+    }
+}
+
+/**
+ * Компонент круговой диаграммы
+ */
+@Composable
+fun AnimatedPieChart(
+    data: List<Float>,
+    labels: List<String>,
+    colors: List<Color>,
+    title: String,
+    modifier: Modifier = Modifier,
+    size: Dp = 150.dp,
+    animated: Boolean = true
+) {
+    val total = data.sum()
+    val animatedProgress by remember { mutableStateOf(0f) }
+    
+    LaunchedEffect(Unit) {
+        if (animated) {
+            kotlinx.coroutines.delay(500)
+        }
+        animatedProgress = 1f
+    }
+    
+    SvitgridGlowCard(
+        modifier = modifier,
+        corner = 16.dp,
+        content = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Заголовок
+                Text(
+                    text = title,
+                    style = SvitCardTitleStyle,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                Spacer(Modifier.height(16.dp))
+                
+                // Круговая диаграмма
+                Box(
+                    modifier = Modifier.size(size)
+                ) {
+                    // Секторы
+                    var currentAngle = 0f
+                    data.forEachIndexed { index, value ->
+                        if (value > 0) {
+                            val angle = (value / total) * 360f * animatedProgress
+                            DrawPieSlice(
+                                startAngle = currentAngle,
+                                sweepAngle = angle,
+                                color = colors[index % colors.size]
+                            )
+                            currentAngle += angle
+                        }
+                    }
+                }
+                
+                // Легенда
+                Spacer(Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    data.forEachIndexed { index, value ->
+                        if (value > 0) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(12.dp)
+                                        .background(colors[index % colors.size])
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    text = "${labels[index]}: ${"%.1f".format(value)}",
+                                    style = SvitSubValueStyle,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    )
+}
+
+/**
+ * Рисование сектора круговой диаграммы
+ */
+private fun DrawScope.DrawPieSlice(
+    startAngle: Float,
+    sweepAngle: Float,
+    color: Color
+) {
+    val path = Path().apply {
+        moveTo(size.width / 2, size.height / 2)
+        
+        val startRad = Math.toRadians(startAngle.toDouble())
+        val sweepRad = Math.toRadians(sweepAngle.toDouble())
+        
+        val startX = size.width / 2 + (size.width / 2) * Math.cos(startRad)
+        val startY = size.height / 2 + (size.height / 2) * Math.sin(startRad)
+        
+        lineTo(startX.toFloat(), startY.toFloat())
+        
+        val endX = size.width / 2 + (size.width / 2) * Math.cos(startRad + sweepRad)
+        val endY = size.height / 2 + (size.height / 2) * Math.sin(startRad + sweepRad)
+        
+        arcTo(
+            left = size.width / 2,
+            top = size.height / 2,
+            right = size.width,
+            bottom = size.height,
+            startAngleDegrees = startAngle,
+            sweepAngle = sweepAngle,
+            forceMoveTo = false
+        )
+        
+        close()
+    }
+    
+    drawPath(path = path, color = color)
+}
