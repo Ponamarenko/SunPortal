@@ -32,6 +32,7 @@ enum class LottieArt(val asset: String) {
     SOLAR_NIGHT("lottie/solar_night.json"),
     SOLAR_PANEL("lottie/solar_panel.json"),
     BATTERY("lottie/battery.json"),
+    BATTERY_CHARGING("lottie/battery.json"), // Та же анимация, но с параметром скорости
     CHARGER("lottie/charger.json"),
     GENERATOR("lottie/generator.json"),
     INVERTER("lottie/inverter.json"),
@@ -40,7 +41,10 @@ enum class LottieArt(val asset: String) {
     TRANSFORMER_NIGHT("lottie/transformer_night.json"),
     TRANSFORMER_3P("lottie/transformer_3p.json"),
     TRANSFORMER_3P_NIGHT("lottie/transformer_3p_night.json"),
-    HOUSEHOLD("lottie/household.json");
+    HOUSEHOLD("lottie/household.json"),
+    POWER_FLOW("lottie/solar.json"), // Для анимации потока энергии
+    GRID_FLOW("lottie/transformer.json"), // Для анимации сети
+    LOAD_FLOW("lottie/home_sun.json"); // Для анимации потребления
 
     companion object {
         /** Вибір анімації будинку залежно від погоди й часу доби */

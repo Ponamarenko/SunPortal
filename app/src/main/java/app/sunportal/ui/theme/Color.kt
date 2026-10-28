@@ -10,7 +10,10 @@ val Sun40 = Color(0xFF8A5000)
 val SunGrey40 = Color(0xFF6F5B3E)
 val Sunrise40 = Color(0xFF8C4A3C)
 
-val PVColor = Color(0xFFFFC107)      // жёлтый
-val LoadColor = Color(0xFF42A5F5)    // синий
-val BatteryColor = Color(0xFF66BB6A) // зелёный
-val GridColor = Color(0xFFEF5350)    // красный
+// Цветовая схема SvitGrid (более насыщенная и контрастная)
+val PVColor = Color(0xFF00A326)      // ярко-зелёный (солнечная выработка)
+val LoadColor = Color(0xFF2196F3)    // ярко-синий (потребление)
+val BatteryColor = Color(0xFFFF9800)   // оранжевый (батарея)
+val GridColor = Color(0xFF9C27B0)    // фиолетовый (сеть)
+val GeneratorColor = Color(0xFFFF5722) // тёмно-оранжевый (генератор)
+val SmartLoadColor = Color(0xFF9C27B0) // фиолетовый (умная нагрузка)

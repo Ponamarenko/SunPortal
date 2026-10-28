@@ -9,6 +9,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -60,6 +61,10 @@ val SmartLoadColor = Color(0x9C27B0)   // #9C27B0 — смарт-нагрузк�
 
 /** Зелёный индикатор выработки PV (как в Svitgrid). */
 val PvActiveColor = Color(0xFF00A326)
+
+/** Усиленные визуальные эффекты для SvitGrid стиля */
+val GlowEffect = Color(0x40FFFFFF) // Полупрозрачный белый для свечения
+val ShadowEffect = Color(0x20000000) // Тень для глубины
 
 /** Тёмная палитра Svitgrid: фон экрана и градиент карточек #131A24 → #0A0D12. */
 val SvitScreenBg = Color(0xFF0A0D12)
@@ -581,15 +586,30 @@ private fun PvColumn(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = { if (onNodeClick != null) onNodeClick?.invoke("pv$index") }),
+            .clickable(onClick = { if (onNodeClick != null) onNodeClick?.invoke("pv$index") })
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        PVColor.copy(alpha = 0.1f),
+                        PVColor.copy(alpha = 0.05f)
+                    )
+                ),
+                RoundedCornerShape(8.dp)
+            )
+            .border(
+                1.dp,
+                PVColor.copy(alpha = 0.3f),
+                RoundedCornerShape(8.dp)
+            ),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = "PV$index",
-            color = LabelGray,
+            color = PVColor,
             fontSize = captionSize,
             lineHeight = captionLine,
             fontFamily = JetBrainsMono,
+            fontWeight = FontWeight.Bold,
             maxLines = 1
         )
         Text(
@@ -599,15 +619,41 @@ private fun PvColumn(
             fontFamily = JetBrainsMono,
             maxLines = 1
         )
-        Image(
-            painter = painterResource(R.drawable.svit_household_solar_array),
-            contentDescription = null,
-            modifier = Modifier.size(56.dp)
-        )
+        Box(
+            modifier = Modifier
+                .size(panelSize)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            PVColor.copy(alpha = 0.1f),
+                            PVColor.copy(alpha = 0.05f)
+                        )
+                    ),
+                    RoundedCornerShape(panelSize * 0.1f)
+                )
+        ) {
+            Image(
+                painter = painterResource(R.drawable.svit_household_solar_array),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(panelSize * 0.9f)
+                    .align(Alignment.Center)
+            )
+            // Индикатор активности
+            if (power > 0f) {
+                Box(
+                    modifier = Modifier
+                        .size(dotSize)
+                        .background(PvActiveColor, CircleShape)
+                        .align(Alignment.BottomEnd)
+                )
+            }
+        }
         Text(
             text = "${"%.1f".format(power / 1000f).replace('.', ',')} кВт",
             color = PVColor,
-            fontSize = 9.sp,
+            fontSize = valueSize,
+            lineHeight = valueLine,
             fontFamily = JetBrainsMono,
             fontWeight = FontWeight.Bold,
             maxLines = 1
@@ -684,8 +730,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFlowDots(
     radiusPx: Float,
     curved: Boolean = false
 ) {
-    // 3 точки со смещением 0, 0.33, 0.66
-    listOf(0f, 0.33f, 0.66f).forEach { offset ->
+    // 5 точек с разными размерами для лучшей визуализации
+    listOf(0f, 0.25f, 0.5f, 0.75f, 1f).forEach { offset ->
         val t = (progress + offset) % 1f
         val pos = if (curved) {
             val (c1, c2) = bezierControl(start, end)
@@ -696,7 +742,13 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFlowDots(
                 y = start.y + (end.y - start.y) * t
             )
         }
-        drawCircle(color = color, radius = radiusPx, center = pos)
+        // Точки с разным размером для эффекта движения
+        val size = radiusPx * (1.2f - abs(t - 0.5f) * 0.4f) // Центральные точки крупнее
+        drawCircle(color = color, radius = size, center = pos)
+        // Добавляем свечение для активных линий
+        if (color != Color.Gray) {
+            drawCircle(color = color.copy(alpha = 0.3f), radius = size * 1.5f, center = pos)
+        }
     }
 }
 
@@ -733,7 +785,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFlowArrowAt(
 
     val base = Offset(tip.x - ux * sizePx, tip.y - uy * sizePx)
     // перпендикуляр к направлению — половина основания
-    val halfBase = sizePx * 0.55f
+    val halfBase = sizePx * 0.6f
     val left = Offset(base.x - uy * halfBase, base.y + ux * halfBase)
     val right = Offset(base.x + uy * halfBase, base.y - ux * halfBase)
 
@@ -743,7 +795,11 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFlowArrowAt(
         lineTo(right.x, right.y)
         close()
     }
+    // Стрелка с контуром для лучшей видимости
     drawPath(path = path, color = color)
+    if (color != Color.Gray) {
+        drawPath(path = path, color = color.copy(alpha = 0.3f), style = Stroke(2f))
+    }
 }
 
 /**
@@ -792,18 +848,58 @@ private fun SchemeNode(
     Column(
         modifier = modifier
             .width(columnWidth)
-            .clickable(onClick = { if (clickKey != null) onNodeClick?.invoke(clickKey!!) }),
+            .clickable(onClick = { if (clickKey != null) onNodeClick?.invoke(clickKey!!) })
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        color.copy(alpha = 0.1f),
+                        color.copy(alpha = 0.05f)
+                    )
+                ),
+                RoundedCornerShape(8.dp)
+            )
+            .border(
+                1.dp,
+                color.copy(alpha = 0.3f),
+                RoundedCornerShape(8.dp)
+            ),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         if (lottieArt != null) {
             // Анимация из assets/lottie (с погодными вариантами дома)
-            LottieArtView(
-                art = lottieArt,
-                size = lottieSize
-            )
+            Box(
+                modifier = Modifier
+                    .size(lottieSize)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                color.copy(alpha = 0.1f),
+                                color.copy(alpha = 0.05f)
+                            )
+                        ),
+                        RoundedCornerShape(lottieSize * 0.1f)
+                    )
+            ) {
+                LottieArtView(
+                    art = lottieArt,
+                    size = lottieSize * 0.9f
+                )
+            }
         } else {
             // Резерв: пустое место, если анимация не задана
-            Spacer(Modifier.size(lottieSize))
+            Spacer(
+                Modifier
+                    .size(lottieSize)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                color.copy(alpha = 0.1f),
+                                color.copy(alpha = 0.05f)
+                            )
+                        ),
+                        RoundedCornerShape(lottieSize * 0.1f)
+                    )
+            )
         }
         if (valueText != null) {
             Text(
@@ -847,7 +943,20 @@ private fun SchemeNode(
             )
         }
         if (labelText != null || badgeRes != null) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                color.copy(alpha = 0.1f),
+                                color.copy(alpha = 0.05f)
+                            )
+                        ),
+                        RoundedCornerShape(4.dp)
+                    )
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            ) {
                 if (badgeRes != null) {
                     // Иконка типа домовладения (Svitgrid)
                     Image(
