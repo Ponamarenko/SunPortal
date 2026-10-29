@@ -77,13 +77,17 @@ fi
 
 # 3. Проверка результата
 log "🔍 Проверка релиза..."
-gh release view "$RELEASE_TAG" --json name,body,createdAt,assets | jq -r '
-    "📦 Релиз создан:",
-    "  Имя: \(.name)",
-    "  Время: \(.createdAt)",
-    "  Файлы: \(.assets | length)",
-    "  Размер: \(.assets[0].size // \"N/A\")"
-'
+gh release view "$RELEASE_TAG" --json name,body,createdAt,assets | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+assets = data.get('assets', [])
+print('📦 Релиз создан:')
+print(f'  Имя: {data.get(\"name\", \"N/A\")}')
+print(f'  Время: {data.get(\"createdAt\", \"N/A\")}')
+print(f'  Файлы: {len(assets)}')
+if assets:
+    print(f'  Размер: {assets[0].get(\"size\", \"N/A\")} bytes')
+"
 
 # 4. Вывод ссылки
 RELEASE_URL="https://github.com/Ponamarenko/SunPortal/releases/tag/$RELEASE_TAG"
