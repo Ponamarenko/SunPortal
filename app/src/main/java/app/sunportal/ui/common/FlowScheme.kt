@@ -65,10 +65,10 @@ val SmartLoadColor = Color(0xFF9C27B0)   // умная нагрузка - фио
 /** Зелёный индикатор выработки PV (точный цвет SvitGrid). */
 val PvActiveColor = Color(0xFF00A326)
 
-/** Точная тёмная палитра SvitGrid: фон экрана и градиент карточек #131A24 → #0A0D12. */
+/** Точная тёмная палитра SvitGrid: фон экрана и градиент карточек #1B232E → #080B10. */
 val SvitScreenBg = Color(0xFF0A0D12)
-val SvitCardTop = Color(0xFF131A24)
-val SvitCardBottom = Color(0xFF0A0D12)
+val SvitCardTop = Color(0xFF1B232E)
+val SvitCardBottom = Color(0xFF080B10)
 val SvitCardGradient = listOf(SvitCardTop, SvitCardBottom)
 
 // Усиленные визуальные эффекты для SvitGrid стиля
@@ -164,9 +164,9 @@ fun FlowScheme(
         val smartX = w * 0.84f; val smartY = h * 0.75f // смарт-нагрузка — справа-снизу
 
         // --- Размеры элементов: Live — крупные иконки, Overview (compact) — меньше ---
-        val nodeSize = if (compact) 58.dp else 88.dp        // батарея/сеть
-        val smallNodeSize = if (compact) 46.dp else 64.dp   // генератор/смарт-нагрузка
-        val invSize = if (compact) 44.dp else 84.dp         // инвертор
+        val nodeSize = if (compact) 54.dp else 72.dp        // батарея/сеть
+        val smallNodeSize = if (compact) 42.dp else 56.dp   // генератор/смарт-нагрузка
+        val invSize = if (compact) 40.dp else 64.dp         // инвертор
         val badgeSize = if (compact) 20.dp else 28.dp       // иконка типа домовладения
         val valueSize = if (compact) 15.sp else 18.sp       // значение узла
         val subSize = if (compact) 10.sp else 12.sp         // доп. строка узла
@@ -823,29 +823,26 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFlowDots(
         // Основная точка
         drawCircle(color = color, radius = size, center = pos)
         
-        // Свечение для активных линий (эффект SvitGrid)
+            // Свечение для активных линий (эффект SvitGrid)
         if (color != Color.Gray) {
             drawCircle(
-                color = color.copy(alpha = 0.4f),
-                radius = size * 1.8f,
+                color = color.copy(alpha = 0.6f),
+                radius = size * 2.0f,
                 center = pos
             )
             drawCircle(
-                color = color.copy(alpha = 0.2f),
-                radius = size * 2.5f,
+                color = color.copy(alpha = 0.3f),
+                radius = size * 3.5f,
                 center = pos
             )
         }
         
-        // Дополнительная точка для эффекта следа
-        if (color != Color.Gray && offset != 0f && offset != 1f) {
-            val trailSize = size * 0.6f
-            drawCircle(
-                color = color.copy(alpha = 0.3f),
-                radius = trailSize,
-                center = pos
-            )
-        }
+        // Дополнительная точка для эффекта яркого ядра
+        drawCircle(
+            color = Color.White.copy(alpha = 0.8f),
+            radius = size * 0.4f,
+            center = pos
+        )
     }
 }
 
