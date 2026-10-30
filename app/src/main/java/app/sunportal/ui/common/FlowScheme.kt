@@ -59,29 +59,21 @@ import kotlin.math.sin
 
 // Основные цвета из SvitGrid
 val LabelGray = Color(0xB3FFFFFF)        // серый для подписей
-val GeneratorColor = Color(0xFFFF9800)   // генератор - оранжевый
-val SmartLoadColor = Color(0xFF9C27B0)   // умная нагрузка - фиолетовый
+val GeneratorColor = Color(0xFF9E9E9E)   // Сделали нейтральным
+val SmartLoadColor = Color(0xFF9E9E9E)   // Сделали нейтральным
 
 /** Зелёный индикатор выработки PV (точный цвет SvitGrid). */
 val PvActiveColor = Color(0xFF00A326)
+
+/** Светлые линии потока (монохромный стиль). */
+val LineColorActive = Color(0xCCFFFFFF)
+val LineColorInactive = Color(0x33FFFFFF)
 
 /** Точная тёмная палитра SvitGrid: фон экрана и градиент карточек #1B232E → #080B10. */
 val SvitScreenBg = Color(0xFF0A0D12)
 val SvitCardTop = Color(0xFF1B232E)
 val SvitCardBottom = Color(0xFF080B10)
 val SvitCardGradient = listOf(SvitCardTop, SvitCardBottom)
-
-// Усиленные визуальные эффекты для SvitGrid стиля
-val GlowEffect = Color(0x40FFFFFF)        // Полупрозрачный белый для свечения
-val ShadowEffect = Color(0x20000000)      // Тень для глубины
-val ActiveGlow = Color(0x40FFFFFF)        // Свечение для активных элементов
-val InactiveGray = Color(0xFF808080)      // Неактивный серый
-
-// Цвета для статусов
-val StatusOnline = Color(0xFF4CAF50)       // Онлайн - зеленый
-val StatusOffline = Color(0xFFFF9800)      // Оффлайн - оранжевый
-val StatusError = Color(0xFFF44336)        // Ошибка - красный
-val StatusWarning = Color(0xFFFFC107)      // Предупреждение - желтый
 
 /** Ёмкость батареи, кВт·ч (2 × 16, см. AboutScreen) */
 private const val BATTERY_CAPACITY_KWH = 32f
@@ -189,10 +181,10 @@ fun FlowScheme(
             )
         }
 
-        // --- Толщина линий передачи: пунктир 1.5.dp (как в Svitgrid) ---
-        val wireWidth = if (compact) 1.5.dp else 1.5.dp
-        val dotRadius = if (compact) 2.dp else 2.5.dp
-        val arrowSize = if (compact) 5.dp else 6.dp
+        // --- Толщина линий передачи: очень тонкие 0.8.dp (как в Svitgrid) ---
+        val wireWidth = 0.8.dp
+        val dotRadius = 1.2.dp
+        val arrowSize = 0.dp // Убираем стрелки, если они не нужны для чистоты
 
         // --- PV-ряд: 3 колонки (как в Svitgrid) над батареей / инвертором / сетью ---
         // ширины колонок адаптивные — на узких экранах (320 dp) не вылезают за край
@@ -251,7 +243,7 @@ fun FlowScheme(
             // 1) PV-шина: горизонтальная линия под рядом панелей + узлы (квадраты)
             val busLeft = px(density, pvColXs[0], busY)
             val busRight = px(density, pvColXs[2], busY)
-            val busColor = if (pvPower > 0f) PVColor else Color.Gray
+            val busColor = if (pvPower > 0f) LineColorActive else LineColorInactive
             drawLine(
                 color = busColor,
                 start = busLeft,
@@ -260,13 +252,14 @@ fun FlowScheme(
                 cap = StrokeCap.Round,
                 pathEffect = dashPathEffect
             )
-            // отводы: панель → шина (с бегущими точками, если есть выработка)
+            // отводы: панель → шина
             pvColXs.forEach { cx ->
                 val top = px(density, cx, pvRowH)
                 val bot = px(density, cx, busY)
-                drawFlowLine(top, bot, pvPower > 0f, PVColor, strokeWidthPx, dashPathEffect)
-                if (pvPower > 0f) {
-                    drawFlowDots(top, bot, PVColor, pvProgress, dotRadiusPx)
+                val isActive = pvPower > 0f // В идеале по колонкам, но пока общий
+                drawFlowLine(top, bot, isActive, LineColorActive, strokeWidthPx, dashPathEffect)
+                if (isActive) {
+                    drawFlowDots(top, bot, LineColorActive, pvProgress, dotRadiusPx)
                 }
                 // узел на шине
                 val s = 4.dp.toPx()
@@ -276,49 +269,40 @@ fun FlowScheme(
                     size = Size(s, s)
                 )
             }
-            // шина → инвертор (центральная вертикаль, поток вниз).
-            // Линия заканчивается над верхним краем иконки инвертора, чтобы стрелка
-            // была видна, а не пряталась под анимацией.
+            // шина → инвертор
             val invTopY = invY - invSize * 0.5f
             val busInvEndY =
                 if (invTopY - 6.dp >= busY + 16.dp) invTopY - 6.dp else busY + 16.dp
             val busInvTop = px(density, w * 0.50f, busY)
             val busInvBottom = px(density, w * 0.50f, busInvEndY)
-            drawFlowLine(busInvTop, busInvBottom, pvPower > 0f, PVColor, strokeWidthPx, dashPathEffect, curved = true)
+            drawFlowLine(busInvTop, busInvBottom, pvPower > 0f, Color.White, strokeWidthPx, dashPathEffect, curved = true)
             if (pvPower > 0f) {
-                drawFlowDots(busInvTop, busInvBottom, PVColor, pvProgress, dotRadiusPx, curved = true)
-                // стрелка только если отрезок не слишком короткий (иначе прячется под иконкой)
-                if (busInvEndY - busY > 20.dp) {
-                    drawFlowArrow(busInvTop, busInvBottom, PVColor, arrowSizePx)
-                }
+                drawFlowDots(busInvTop, busInvBottom, Color.White, pvProgress, dotRadiusPx, curved = true)
             }
 
-            // 2) Батарея ↔ Инвертор (горизонтальная; направление по знаку p_batt)
+            // 2) Батарея ↔ Инвертор (направление по знаку p_batt)
             val battStart = if (battPower > 0f) battLineLeft else battLineRight
             val battEnd = if (battPower > 0f) battLineRight else battLineLeft
-            drawFlowLine(battStart, battEnd, abs(battPower) > 0f, BatteryColor, strokeWidthPx, dashPathEffect)
+            drawFlowLine(battStart, battEnd, abs(battPower) > 0f, Color.White, strokeWidthPx, dashPathEffect)
             if (abs(battPower) > 0f) {
-                drawFlowDots(battStart, battEnd, BatteryColor, battProgress, dotRadiusPx)
-                drawFlowArrow(battStart, battEnd, BatteryColor, arrowSizePx)
+                drawFlowDots(battStart, battEnd, Color.White, battProgress, dotRadiusPx)
             }
 
-            // 3) Сеть ↔ Инвертор (горизонтальная; направление по знаку p_grid)
+            // 3) Сеть ↔ Инвертор
             val gridStart = if (gridPower > 0f) gridLineRight else gridLineLeft
             val gridEnd = if (gridPower > 0f) gridLineLeft else gridLineRight
-            drawFlowLine(gridStart, gridEnd, abs(gridPower) > 0f, GridColor, strokeWidthPx, dashPathEffect)
+            drawFlowLine(gridStart, gridEnd, abs(gridPower) > 0f, Color.White, strokeWidthPx, dashPathEffect)
             if (abs(gridPower) > 0f) {
-                drawFlowDots(gridStart, gridEnd, GridColor, gridProgress, dotRadiusPx)
-                drawFlowArrow(gridStart, gridEnd, GridColor, arrowSizePx)
+                drawFlowDots(gridStart, gridEnd, Color.White, gridProgress, dotRadiusPx)
             }
 
-            // 4) Инвертор → Дом (вертикальная, сверху вниз)
-            drawFlowLine(homeLineTop, homeLineBottom, loadPower > 0f, LoadColor, strokeWidthPx, dashPathEffect)
+            // 4) Инвертор → Дом
+            drawFlowLine(homeLineTop, homeLineBottom, loadPower > 0f, Color.White, strokeWidthPx, dashPathEffect)
             if (loadPower > 0f) {
-                drawFlowDots(homeLineTop, homeLineBottom, LoadColor, loadProgress, dotRadiusPx)
-                drawFlowArrow(homeLineTop, homeLineBottom, LoadColor, arrowSizePx)
+                drawFlowDots(homeLineTop, homeLineBottom, Color.White, loadProgress, dotRadiusPx)
             }
 
-            // 5) Генератор → Инвертор (оранжевая #FF9800, только при p_gen > 0)
+            // 5) Генератор → Инвертор
             if (genPower > 0f) {
                 val gl = hypot((invPos.x - genPos.x).toDouble(), (invPos.y - genPos.y).toDouble()).toFloat()
                 val gux = (invPos.x - genPos.x) / gl
@@ -326,12 +310,11 @@ fun FlowScheme(
                 val genTrim = 8f
                 val genStart = Offset(genPos.x + gux * genTrim, genPos.y + guy * genTrim)
                 val genEnd = Offset(invPos.x - gux * genTrim, invPos.y - guy * genTrim)
-                drawFlowLine(genStart, genEnd, true, GeneratorColor, strokeWidthPx, dashPathEffect)
-                drawFlowDots(genStart, genEnd, GeneratorColor, genProgress, dotRadiusPx)
-                drawFlowArrow(genStart, genEnd, GeneratorColor, arrowSizePx)
+                drawFlowLine(genStart, genEnd, true, Color.White, strokeWidthPx, dashPathEffect)
+                drawFlowDots(genStart, genEnd, Color.White, genProgress, dotRadiusPx)
             }
 
-            // 6) Инвертор → Смарт-нагрузка (фиолетовая #9C27B0, только при p_smart_load > 0)
+            // 6) Инвертор → Смарт-нагрузка
             if (smartPower > 0f) {
                 val sl = hypot((smartPos.x - invPos.x).toDouble(), (smartPos.y - invPos.y).toDouble()).toFloat()
                 val sux = (smartPos.x - invPos.x) / sl
@@ -339,9 +322,8 @@ fun FlowScheme(
                 val smartTrim = 8f
                 val smStart = Offset(invPos.x + sux * smartTrim, invPos.y + suy * smartTrim)
                 val smEnd = Offset(smartPos.x - sux * smartTrim, smartPos.y - suy * smartTrim)
-                drawFlowLine(smStart, smEnd, true, SmartLoadColor, strokeWidthPx, dashPathEffect)
-                drawFlowDots(smStart, smEnd, SmartLoadColor, smartProgress, dotRadiusPx)
-                drawFlowArrow(smStart, smEnd, SmartLoadColor, arrowSizePx)
+                drawFlowLine(smStart, smEnd, true, Color.White, strokeWidthPx, dashPathEffect)
+                drawFlowDots(smStart, smEnd, Color.White, smartProgress, dotRadiusPx)
             }
         }
 
@@ -361,7 +343,6 @@ fun FlowScheme(
                 textAlign = TextAlign.Center
             )
         }
-
         // --- PV-ряд: 3 колонки ---
         val pvStrings = listOf(d.p_string1, d.p_string2, d.p_string3)
         pvColXs.forEachIndexed { i, cx ->
@@ -422,7 +403,6 @@ fun FlowScheme(
             labelLine = labelLine,
             color = BatteryColor
         )
-
         // Сеть справа — трансформатор svitgrid (столб), при p_grid = 0: "OFF" + "Вимк."
         SchemeNode(
             modifier = Modifier
@@ -611,34 +591,14 @@ private fun PvColumn(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = { if (onNodeClick != null) onNodeClick?.invoke("pv$index") })
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        PVColor.copy(alpha = alpha),
-                        PVColor.copy(alpha = alpha.times(0.5f))
-                    )
-                ),
-                RoundedCornerShape(12.dp)
-            )
-            .border(
-                1.dp,
-                PVColor.copy(alpha = borderAlpha),
-                RoundedCornerShape(12.dp)
-            )
-            .shadow(
-                elevation = if (active) 4.dp else 0.dp,
-                shape = RoundedCornerShape(12.dp),
-                ambientColor = PVColor.copy(alpha = 0.2f),
-                spotColor = PVColor.copy(alpha = 0.1f)
-            ),
+            .clickable(onClick = { if (onNodeClick != null) onNodeClick?.invoke("pv$index") }),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // Заголовок PV
         Text(
             text = "PV$index",
             style = SvitCardTitleStyle,
-            color = if (active) PVColor else PVColor.copy(alpha = 0.6f),
+            color = LabelGray,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 8.dp)
         )
@@ -652,24 +612,9 @@ private fun PvColumn(
             modifier = Modifier.padding(top = 2.dp)
         )
         
-        // Панель PV с анимацией
+        // Панель PV
         Box(
-            modifier = Modifier
-                .size(panelSize)
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            PVColor.copy(alpha = alpha * 0.8f),
-                            PVColor.copy(alpha = alpha * 0.4f)
-                        )
-                    ),
-                    RoundedCornerShape(panelSize * 0.1f)
-                )
-                .border(
-                    1.dp,
-                    PVColor.copy(alpha = borderAlpha * 0.5f),
-                    RoundedCornerShape(panelSize * 0.1f)
-                )
+            modifier = Modifier.size(panelSize)
         ) {
             Image(
                 painter = painterResource(R.drawable.svit_household_solar_array),
@@ -702,7 +647,7 @@ private fun PvColumn(
         Text(
             text = "${"%.1f".format(power / 1000f).replace('.', ',')} кВт",
             style = SvitValueStyle,
-            color = if (active) PVColor else PVColor.copy(alpha = 0.6f),
+            color = Color.White,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
         )
@@ -756,22 +701,6 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFlowLine(
         cap = StrokeCap.Round,
         pathEffect = pathEffect
     )
-    
-    // Для активных линий добавляем эффект свечения в стиле SvitGrid
-    if (active && color != Color.Gray) {
-        // Внешнее свечение
-        drawPath(
-            path = path,
-            color = color.copy(alpha = 0.1f),
-            style = Stroke(strokeWidthPx * 3f, cap = StrokeCap.Round, pathEffect = pathEffect)
-        )
-        // Среднее свечение
-        drawPath(
-            path = path,
-            color = color.copy(alpha = 0.2f),
-            style = Stroke(strokeWidthPx * 1.8f, cap = StrokeCap.Round, pathEffect = pathEffect)
-        )
-    }
     
     // Основная линия
     drawPath(path = path, color = lineColor, style = stroke)
@@ -972,49 +901,11 @@ private fun SchemeNode(
     Column(
         modifier = modifier
             .width(columnWidth)
-            .clickable(onClick = { if (clickKey != null) onNodeClick?.invoke(clickKey!!) })
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        color.copy(alpha = alpha),
-                        color.copy(alpha = alpha.times(0.5f))
-                    )
-                ),
-                RoundedCornerShape(12.dp)
-            )
-            .border(
-                1.dp,
-                color.copy(alpha = borderAlpha),
-                RoundedCornerShape(12.dp)
-            )
-            .shadow(
-                elevation = if (active) 4.dp else 0.dp,
-                shape = RoundedCornerShape(12.dp),
-                ambientColor = color.copy(alpha = 0.2f),
-                spotColor = color.copy(alpha = 0.1f)
-            ),
+            .clickable(onClick = { if (clickKey != null) onNodeClick?.invoke(clickKey!!) }),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         if (lottieArt != null) {
-            // Анимация из assets/lottie (с погодными вариантами дома)
-            Box(
-                modifier = Modifier
-                    .size(lottieSize)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                color.copy(alpha = alpha.times(0.8f)),
-                                color.copy(alpha = alpha.times(0.4f))
-                            )
-                        ),
-                        RoundedCornerShape(lottieSize * 0.1f)
-                    )
-                    .border(
-                        1.dp,
-                        color.copy(alpha = borderAlpha * 0.5f),
-                        RoundedCornerShape(lottieSize * 0.1f)
-                    )
-            ) {
+            Box(modifier = Modifier.size(lottieSize).padding(4.dp)) {
                 LottieArtView(
                     art = lottieArt,
                     size = lottieSize * 0.9f,
@@ -1022,28 +913,15 @@ private fun SchemeNode(
                 )
             }
         } else {
-            // Резерв: пустое место, если анимация не задана
-            Spacer(
-                Modifier
-                    .size(lottieSize)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                color.copy(alpha = alpha),
-                                color.copy(alpha = alpha.times(0.5f))
-                            )
-                        ),
-                        RoundedCornerShape(lottieSize * 0.1f)
-                    )
-            )
+            Spacer(Modifier.size(lottieSize))
         }
         
         // Значение узла
         if (valueText != null) {
             Text(
                 text = valueText,
-                style = if (active) SvitValueStyle else SvitValueStyle.copy(color = color.copy(alpha = 0.6f)),
-                color = if (active) color else color.copy(alpha = 0.6f),
+                style = SvitValueStyle,
+                color = if (active) Color.White else LabelGray,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 4.dp)
             )
@@ -1054,7 +932,7 @@ private fun SchemeNode(
             Text(
                 text = subText,
                 style = SvitSubValueStyle,
-                color = if (active) Color.White else Color.White.copy(alpha = 0.6f),
+                color = LabelGray,
                 textAlign = TextAlign.Center
             )
         }
@@ -1075,7 +953,7 @@ private fun SchemeNode(
             Text(
                 text = smallText,
                 style = SvitLabelStyle,
-                color = if (active) LabelGray else LabelGray.copy(alpha = 0.5f),
+                color = LabelGray,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 2.dp)
             )
@@ -1085,21 +963,9 @@ private fun SchemeNode(
         if (labelText != null || badgeRes != null) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                color.copy(alpha = alpha.times(0.6f)),
-                                color.copy(alpha = alpha.times(0.3f))
-                            )
-                        ),
-                        RoundedCornerShape(6.dp)
-                    )
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
-                    .padding(top = 4.dp)
+                modifier = Modifier.padding(top = 4.dp)
             ) {
                 if (badgeRes != null) {
-                    // Иконка типа домовладения (Svitgrid)
                     Image(
                         painter = painterResource(badgeRes),
                         contentDescription = null,
@@ -1111,7 +977,7 @@ private fun SchemeNode(
                     Text(
                         text = labelText,
                         style = SvitLabelStyle,
-                        color = if (active) LabelGray else LabelGray.copy(alpha = 0.5f),
+                        color = LabelGray,
                         textAlign = TextAlign.Center
                     )
                 }
