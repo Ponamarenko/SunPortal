@@ -240,44 +240,15 @@ fun FlowScheme(
             val dotRadiusPx = dotRadius.toPx()        // мелкие бегущие точки
             val arrowSizePx = arrowSize.toPx()        // аккуратные стрелки у конца
 
-            // 1) PV-шина: горизонтальная линия под рядом панелей + узлы (квадраты)
-            val busLeft = px(density, pvColXs[0], busY)
-            val busRight = px(density, pvColXs[2], busY)
-            val busColor = if (pvPower > 0f) LineColorActive else LineColorInactive
-            drawLine(
-                color = busColor,
-                start = busLeft,
-                end = busRight,
-                strokeWidth = strokeWidthPx,
-                cap = StrokeCap.Round,
-                pathEffect = dashPathEffect
-            )
-            // отводы: панель → шина
+            // 1) PV: от каждого поля — своя линия к инвертору (с красивым изломом)
             pvColXs.forEach { cx ->
-                val top = px(density, cx, pvRowH)
-                val bot = px(density, cx, busY)
-                val isActive = pvPower > 0f // В идеале по колонкам, но пока общий
-                drawFlowLine(top, bot, isActive, LineColorActive, strokeWidthPx, dashPathEffect)
+                val panelBottom = px(density, cx, pvRowH)
+                val invTop = px(density, invX, invY - invSize * 0.5f + 2.dp)
+                val isActive = pvPower > 0f
+                drawFlowLine(panelBottom, invTop, isActive, LineColorActive, strokeWidthPx, dashPathEffect, curved = true)
                 if (isActive) {
-                    drawFlowDots(top, bot, LineColorActive, pvProgress, dotRadiusPx)
+                    drawFlowDots(panelBottom, invTop, LineColorActive, pvProgress, dotRadiusPx, curved = true)
                 }
-                // узел на шине
-                val s = 4.dp.toPx()
-                drawRect(
-                    color = busColor,
-                    topLeft = Offset(bot.x - s / 2f, bot.y - s / 2f),
-                    size = Size(s, s)
-                )
-            }
-            // шина → инвертор
-            val invTopY = invY - invSize * 0.5f
-            val busInvEndY =
-                if (invTopY - 6.dp >= busY + 16.dp) invTopY - 6.dp else busY + 16.dp
-            val busInvTop = px(density, w * 0.50f, busY)
-            val busInvBottom = px(density, w * 0.50f, busInvEndY)
-            drawFlowLine(busInvTop, busInvBottom, pvPower > 0f, Color.White, strokeWidthPx, dashPathEffect, curved = true)
-            if (pvPower > 0f) {
-                drawFlowDots(busInvTop, busInvBottom, Color.White, pvProgress, dotRadiusPx, curved = true)
             }
 
             // 2) Батарея ↔ Инвертор (направление по знаку p_batt)
@@ -388,7 +359,7 @@ fun FlowScheme(
                 .offset(x = battX - battColW * 0.5f, y = battY - nodeSize * 0.5f),
             columnWidth = battColW,
             clickKey = "batt",
-            lottieArt = LottieArt.BATTERY,
+            lottieArt = if (battPower > 0f) LottieArt.BATTERY_CHARGING else LottieArt.BATTERY,
             lottieSize = nodeSize,
             valueText = "${battPower.toInt()} Вт",
             subText = buildBatterySub(d.batt_soc, d.battery_voltage),
@@ -600,16 +571,13 @@ private fun PvColumn(
             modifier = Modifier.padding(top = 2.dp)
         )
         
-        // Панель PV
+        // Панель PV — Lottie-анімація «solar_panel» (як у Svitgrid)
         Box(
             modifier = Modifier.size(panelSize)
         ) {
-            Image(
-                painter = painterResource(R.drawable.svit_household_solar_array),
-                contentDescription = null,
-                modifier = Modifier
-                    .size(panelSize * 0.9f)
-                    .align(Alignment.Center)
+            LottieArtView(
+                art = LottieArt.SOLAR_PANEL,
+                size = panelSize * 0.9f
             )
             
             // Индикатор активности с пульсацией
@@ -884,7 +852,8 @@ private fun SchemeNode(
                 LottieArtView(
                     art = lottieArt,
                     size = lottieSize * 0.9f,
-                    speed = if (active) 1f else 0.5f
+                    // BATTERY_CHARGING — анімація акумулятора в стані зарядки (швидший темп)
+                    speed = if (lottieArt == LottieArt.BATTERY_CHARGING) 1.5f else if (active) 1f else 0.5f
                 )
             }
         } else {
