@@ -154,9 +154,6 @@ fun FlowScheme(
         val homeX = w * 0.50f; val homeY = h * 0.85f  // дом — снизу
         val genX = w * 0.16f;  val genY = h * 0.75f   // генератор — слева-снизу
         val smartX = w * 0.84f; val smartY = h * 0.75f // смарт-нагрузка — справа-снизу
-        // Позиция для UPS-баджа под инвертором
-        val upsBadgeX = invX; val upsBadgeY = invY + invSize * 0.6f
-
         // --- Размеры элементов: Live — крупные иконки, Overview (compact) — меньше ---
         val nodeSize = if (compact) 54.dp else 72.dp        // батарея/сеть
         val smallNodeSize = if (compact) 42.dp else 56.dp   // генератор/смарт-нагрузка
@@ -164,6 +161,9 @@ fun FlowScheme(
         val invSize = if (compact) 40.dp else 64.dp         // инвертор
         val badgeSize = if (compact) 20.dp else 28.dp       // иконка типа домовладения
         val upsBadgeSize = if (compact) 18.dp else 24.dp    // UPS-бадж под инвертором
+        
+        // Позиция для UPS-баджа под инвертором
+        val upsBadgeX = invX; val upsBadgeY = invY + invSize * 0.6f
         val valueSize = if (compact) 15.sp else 18.sp       // значение узла
         val subSize = if (compact) 10.sp else 12.sp         // доп. строка узла
         val labelSize = if (compact) 10.sp else 11.sp       // подпись узла
@@ -173,6 +173,12 @@ fun FlowScheme(
         val labelLine = if (compact) 13.sp else TextUnit.Unspecified
         // высота текста под иконкой узла (значение + подпись) — для прижатия узла «Дім»
         val nodeTextH = if (compact) 32.dp else 48.dp
+        
+        // Ширина колонок для узлов
+        val battColW = minOf(110.dp, w * 0.31f)
+        val gridColW = minOf(90.dp, w * 0.25f)
+        val homeColW = minOf(110.dp, w * 0.31f)
+        val smallColW = minOf(96.dp, w * 0.27f)
         // Дом — крупнее всех (как в Svitgrid), но на низких экранах ужимается,
         // чтобы не налезать на инвертор и не уйти за нижний край
         val homeSize = if (compact) {
