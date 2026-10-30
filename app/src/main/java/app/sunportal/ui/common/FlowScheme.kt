@@ -158,6 +158,7 @@ fun FlowScheme(
         // --- Размеры элементов: Live — крупные иконки, Overview (compact) — меньше ---
         val nodeSize = if (compact) 54.dp else 72.dp        // батарея/сеть
         val smallNodeSize = if (compact) 42.dp else 56.dp   // генератор/смарт-нагрузка
+        val battSize = if (compact) 62.dp else 84.dp          // батарея — крупнее (Svitgrid)
         val invSize = if (compact) 40.dp else 64.dp         // инвертор
         val badgeSize = if (compact) 20.dp else 28.dp       // иконка типа домовладения
         val valueSize = if (compact) 15.sp else 18.sp       // значение узла
@@ -214,7 +215,7 @@ fun FlowScheme(
 
         // --- Точки отрезков линий: концы у краёв иконок, чтобы стрелки были видны ---
         // Батарея ↔ Инвертор: горизонтальная y=0.50h, от края батареи до края инвертора
-        val battLineLeft = px(density, battX + nodeSize * 0.5f + 4.dp, h * 0.50f)
+        val battLineLeft = px(density, battX + battSize * 0.5f + 4.dp, h * 0.50f)
         val battLineRight = px(density, invX - invSize * 0.5f - 4.dp, h * 0.50f)
         // Сеть ↔ Инвертор: горизонтальная y=0.50h, от края инвертора до края сети
         val gridLineRight = px(density, gridX - nodeSize * 0.5f - 4.dp, h * 0.50f)
@@ -240,14 +241,14 @@ fun FlowScheme(
             val dotRadiusPx = dotRadius.toPx()        // мелкие бегущие точки
             val arrowSizePx = arrowSize.toPx()        // аккуратные стрелки у конца
 
-            // 1) PV: от каждого поля — своя линия к инвертору (с красивым изломом)
+            // 1) PV: от каждого поля — своя линия к инвертору (под углом, к как в Svitgrid)
             pvColXs.forEach { cx ->
                 val panelBottom = px(density, cx, pvRowH)
                 val invTop = px(density, invX, invY - invSize * 0.5f + 2.dp)
                 val isActive = pvPower > 0f
-                drawFlowLine(panelBottom, invTop, isActive, LineColorActive, strokeWidthPx, dashPathEffect, curved = true)
+                drawFlowLine(panelBottom, invTop, isActive, LineColorActive, strokeWidthPx, dashPathEffect, curved = false)
                 if (isActive) {
-                    drawFlowDots(panelBottom, invTop, LineColorActive, pvProgress, dotRadiusPx, curved = true)
+                    drawFlowDots(panelBottom, invTop, LineColorActive, pvProgress, dotRadiusPx)
                 }
             }
 
@@ -356,11 +357,11 @@ fun FlowScheme(
         SchemeNode(
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .offset(x = battX - battColW * 0.5f, y = battY - nodeSize * 0.5f),
+                .offset(x = battX - battColW * 0.5f, y = battY - battSize * 0.5f),
             columnWidth = battColW,
             clickKey = "batt",
             lottieArt = if (battPower > 0f) LottieArt.BATTERY_CHARGING else LottieArt.BATTERY,
-            lottieSize = nodeSize,
+            lottieSize = battSize,
             valueText = "${battPower.toInt()} Вт",
             subText = buildBatterySub(d.batt_soc, d.battery_voltage),
             extraText = "%.1f°C".format(d.battery_temp),
@@ -571,13 +572,16 @@ private fun PvColumn(
             modifier = Modifier.padding(top = 2.dp)
         )
         
-        // Панель PV — Lottie-анімація «solar_panel» (як у Svitgrid)
+        // Панель PV — іконка з APK Svitgrid (svit_household_solar_array)
         Box(
             modifier = Modifier.size(panelSize)
         ) {
-            LottieArtView(
-                art = LottieArt.SOLAR_PANEL,
-                size = panelSize * 0.9f
+            Image(
+                painter = painterResource(R.drawable.svit_household_solar_array),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(panelSize * 0.9f)
+                    .align(Alignment.Center)
             )
             
             // Индикатор активности с пульсацией
