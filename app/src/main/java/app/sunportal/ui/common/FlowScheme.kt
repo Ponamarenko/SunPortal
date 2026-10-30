@@ -575,19 +575,7 @@ private fun PvColumn(
     onNodeClick: ((String) -> Unit)? = null
 ) {
     val active = power > 0f
-    val targetAlpha = if (active) 0.15f else 0.05f
-    val targetBorderAlpha = if (active) 0.4f else 0.1f
-    
-    // Анимация для активных состояний
-    val alpha by animateFloatAsState(
-        targetValue = targetAlpha,
-        animationSpec = tween(300)
-    )
-    val borderAlpha by animateFloatAsState(
-        targetValue = targetBorderAlpha,
-        animationSpec = tween(300)
-    )
-    
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -885,19 +873,6 @@ private fun SchemeNode(
     color: Color,
     active: Boolean = true
 ) {
-    val targetAlpha = if (active) 0.15f else 0.05f
-    val targetBorderAlpha = if (active) 0.4f else 0.1f
-    
-    // Анимация для активных состояний
-    val alpha by animateFloatAsState(
-        targetValue = targetAlpha,
-        animationSpec = tween(300)
-    )
-    val borderAlpha by animateFloatAsState(
-        targetValue = targetBorderAlpha,
-        animationSpec = tween(300)
-    )
-    
     Column(
         modifier = modifier
             .width(columnWidth)
