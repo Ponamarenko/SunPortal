@@ -154,6 +154,8 @@ fun FlowScheme(
         val homeX = w * 0.50f; val homeY = h * 0.85f  // дом — снизу
         val genX = w * 0.16f;  val genY = h * 0.75f   // генератор — слева-снизу
         val smartX = w * 0.84f; val smartY = h * 0.75f // смарт-нагрузка — справа-снизу
+        // Позиция для UPS-баджа под инвертором
+        val upsBadgeX = invX; val upsBadgeY = invY + invSize * 0.6f
 
         // --- Размеры элементов: Live — крупные иконки, Overview (compact) — меньше ---
         val nodeSize = if (compact) 54.dp else 72.dp        // батарея/сеть
@@ -161,6 +163,7 @@ fun FlowScheme(
         val battSize = if (compact) 62.dp else 84.dp          // батарея — крупнее (Svitgrid)
         val invSize = if (compact) 40.dp else 64.dp         // инвертор
         val badgeSize = if (compact) 20.dp else 28.dp       // иконка типа домовладения
+        val upsBadgeSize = if (compact) 18.dp else 24.dp    // UPS-бадж под инвертором
         val valueSize = if (compact) 15.sp else 18.sp       // значение узла
         val subSize = if (compact) 10.sp else 12.sp         // доп. строка узла
         val labelSize = if (compact) 10.sp else 11.sp       // подпись узла
@@ -187,14 +190,10 @@ fun FlowScheme(
         val dotRadius = 1.2.dp
         val arrowSize = 0.dp // Убираем стрелки, если они не нужны для чистоты
 
-        // --- PV-ряд: 3 колонки (как в Svitgrid) над батареей / инвертором / сетью ---
-        // ширины колонок адаптивные — на узких экранах (320 dp) не вылезают за край
-        val battColW = minOf(110.dp, w * 0.31f)
-        val gridColW = minOf(90.dp, w * 0.25f)
-        val homeColW = minOf(110.dp, w * 0.31f)
-        val smallColW = minOf(96.dp, w * 0.27f)
+        // --- PV-ряд: 2 колонки (PV1 слева, PV2 справа) в стиле Svitgrid ---
+        // ширина колонок адаптивная — на узких экранах не вылезают за край
         val pvColW = if (compact) minOf(92.dp, w * 0.26f) else minOf(104.dp, w * 0.28f)
-        val pvColXs = listOf(battX, w * 0.50f, gridX)
+        val pvColXs = listOf(w * 0.25f, w * 0.75f) // PV1 слева, PV2 справа
         val pvCaptionSize = if (compact) 8.sp else 9.sp
         val pvValueSize = if (compact) 10.sp else 11.sp
         val pvCaptionLine = if (compact) 9.sp else 10.sp
@@ -207,11 +206,6 @@ fun FlowScheme(
         // высота PV-ряда: подпись + мощность + панель + индикатор
         val pvRowH = pvRowTop +
             pvCaptionLine.value.dp + pvValueLine.value.dp + pvPanelSize + pvDotSize + 6.dp
-        // шина PV — под рядом панелей (но выше инвертора)
-        val busY = maxOf(
-            minOf(h * 0.34f, maxOf(pvRowH + 14.dp, h * 0.20f)),
-            pvRowH + 4.dp
-        )
 
         // --- Точки отрезков линий: концы у краёв иконок, чтобы стрелки были видны ---
         // Батарея ↔ Инвертор: горизонтальная y=0.50h, от края батареи до края инвертора
@@ -229,6 +223,10 @@ fun FlowScheme(
             w * 0.50f,
             maxOf(homeNodeTop + 4.dp, invY + 24.dp)
         )
+        // Grid T-branch: точка разветвления от сети к дому и к UPS-баджу
+        val tBranchX = px(density, gridX - 40.dp, gridY + 30.dp)
+        val gridToHomeX = px(density, w * 0.50f, gridY + 30.dp)
+        val gridToUpsX = px(density, upsBadgeX, gridY + 30.dp)
         // Позиции узлов (px для Canvas)
         val invPos = px(density, invX, invY)
         val genPos = px(density, genX, genY)
@@ -260,12 +258,19 @@ fun FlowScheme(
                 drawFlowDots(battStart, battEnd, Color.White, battProgress, dotRadiusPx)
             }
 
-            // 3) Сеть ↔ Инвертор
-            val gridStart = if (gridPower > 0f) gridLineRight else gridLineLeft
-            val gridEnd = if (gridPower > 0f) gridLineLeft else gridLineRight
-            drawFlowLine(gridStart, gridEnd, abs(gridPower) > 0f, Color.White, strokeWidthPx, dashPathEffect)
+            // 3) Сеть → T-branch → Дом и UPS-бадж
             if (abs(gridPower) > 0f) {
-                drawFlowDots(gridStart, gridEnd, Color.White, gridProgress, dotRadiusPx)
+                // Сеть → T-branch
+                drawFlowLine(gridLineRight, tBranchX, true, Color.White, strokeWidthPx, dashPathEffect)
+                drawFlowDots(gridLineRight, tBranchX, Color.White, gridProgress, dotRadiusPx)
+                
+                // T-branch → Дом
+                drawFlowLine(gridToHomeX, homeLineTop, true, Color.White, strokeWidthPx, dashPathEffect)
+                drawFlowDots(gridToHomeX, homeLineTop, Color.White, gridProgress, dotRadiusPx)
+                
+                // T-branch → UPS-бадж
+                drawFlowLine(gridToUpsX, px(density, upsBadgeX, upsBadgeY), true, Color.White, strokeWidthPx, dashPathEffect)
+                drawFlowDots(gridToUpsX, px(density, upsBadgeX, upsBadgeY), Color.White, gridProgress, dotRadiusPx)
             }
 
             // 4) Инвертор → Дом
@@ -315,8 +320,8 @@ fun FlowScheme(
                 textAlign = TextAlign.Center
             )
         }
-        // --- PV-ряд: 3 колонки ---
-        val pvStrings = listOf(d.p_string1, d.p_string2, d.p_string3)
+        // --- PV-ряд: 2 колонки (PV1 и PV2) ---
+        val pvStrings = listOf(d.p_string1, d.p_string2)
         pvColXs.forEachIndexed { i, cx ->
             Box(
                 modifier = Modifier
@@ -334,14 +339,14 @@ fun FlowScheme(
                     valueSize = pvValueSize,
                     captionLine = pvCaptionLine,
                     valueLine = pvValueLine,
-                    voltage = listOf(d.pv1_voltage, d.pv2_voltage, d.pv3_voltage).getOrElse(i) { 0f },
-                    current = listOf(d.pv1_current, d.pv2_current, d.pv3_current).getOrElse(i) { 0f },
+                    voltage = listOf(d.pv1_voltage, d.pv2_voltage).getOrElse(i) { 0f },
+                    current = listOf(d.pv1_current, d.pv2_current).getOrElse(i) { 0f },
                     onNodeClick = onNodeClick
                 )
             }
         }
 
-        // Инвертор (центр — маленький, без подписи)
+        // Инвертор (центр — маленький, с подписью "UPS")
         Box(
             modifier = Modifier
                 .align(Alignment.TopStart)
@@ -351,6 +356,37 @@ fun FlowScheme(
             contentAlignment = Alignment.Center
         ) {
             LottieArtView(art = LottieArt.INVERTER, size = invSize)
+        }
+        
+        // UPS подпись под инвертором
+        Text(
+            text = "UPS",
+            color = LabelGray,
+            fontSize = if (compact) 10.sp else 11.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .offset(x = invX - 20.dp, y = invY + invSize * 0.5f + 4.dp)
+                .width(40.dp)
+        )
+        
+        // UPS-бадж под инвертором
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .offset(x = upsBadgeX - upsBadgeSize * 0.5f, y = upsBadgeY)
+                .size(upsBadgeSize)
+                .background(Color.Green.copy(alpha = 0.8f), RoundedCornerShape(upsBadgeSize * 0.4f))
+                .padding(horizontal = 4.dp, vertical = 2.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "${"%.1f".format(abs(gridPower) / 1000f).replace('.', ',')} кВт",
+                color = Color.White,
+                fontSize = if (compact) 10.sp else 11.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
         }
 
         // Батарея слева
@@ -362,9 +398,9 @@ fun FlowScheme(
             clickKey = "batt",
             lottieArt = if (battPower > 0f) LottieArt.BATTERY_CHARGING else LottieArt.BATTERY,
             lottieSize = battSize,
-            valueText = "${battPower.toInt()} Вт",
-            subText = buildBatterySub(d.batt_soc, d.battery_voltage),
-            extraText = "%.1f°C".format(d.battery_temp),
+            valueText = "${"%.1f".format(d.battery_voltage)} В · ${d.batt_soc.toInt()}%",
+            subText = if (battPower > 0f) "Зарядка · ${"%.0f".format(abs(battPower))} Вт" else "%.1f°C".format(d.battery_temp),
+            extraText = null,
             smallText = null,
             labelText = null,
             valueSize = valueSize,
@@ -384,9 +420,9 @@ fun FlowScheme(
             clickKey = "grid",
             lottieArt = if (isDay) LottieArt.TRANSFORMER else LottieArt.TRANSFORMER_NIGHT,
             lottieSize = nodeSize,
-            valueText = "${gridPower.toInt()} Вт",
-            subText = null,
-            smallText = if (abs(gridPower) < 0.01f) "OFF" else buildGridStatus(gridPower, gridVoltage),
+            valueText = "${abs(gridPower).toInt()} Вт",
+            subText = buildGridVoltages(d.grid_voltage_l1, d.grid_voltage_l2, d.grid_voltage_l3),
+            smallText = if (abs(gridPower) < 0.01f) "OFF" else if (gridPower < 0f) "Експорт" else "Імпорт",
             labelText = if (abs(gridPower) < 0.01f) "Вимк." else null,
             valueSize = valueSize,
             subSize = subSize,
@@ -396,6 +432,25 @@ fun FlowScheme(
             labelLine = labelLine,
             color = GridColor
         )
+        
+        // 423 W Grid pill badge (T-branch connection to house)
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .offset(x = w * 0.50f - 30.dp, y = gridY + 40.dp)
+                .size(60.dp, 24.dp)
+                .background(Color.Blue.copy(alpha = 0.8f), RoundedCornerShape(12.dp))
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "423 В",
+                color = Color.White,
+                fontSize = if (compact) 10.sp else 11.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+        }
 
         // Дом снизу (с иконкой типа домовладения)
         SchemeNode(
@@ -408,8 +463,8 @@ fun FlowScheme(
             lottieSize = homeSize,
             valueText = "${loadPower.toInt()} Вт",
             subText = null,
-            smallText = null,
-            labelText = "Споживання",
+            smallText = "Споживання",
+            labelText = null,
             badgeRes = household.iconRes,
             badgeSize = badgeSize,
             valueSize = valueSize,
@@ -525,6 +580,13 @@ fun buildGridStatus(pgrid: Float, voltage: Float?): String {
     }
     val v = if (voltage != null && voltage > 0f) " · ${voltage.toInt()}V" else ""
     return "$status$v"
+}
+
+fun buildGridVoltages(voltageL1: Float?, voltageL2: Float?, voltageL3: Float?): String {
+    val v1 = voltageL1?.toInt() ?: 0
+    val v2 = voltageL2?.toInt() ?: 0  
+    val v3 = voltageL3?.toInt() ?: 0
+    return "$v1/$v2/$v3 В"
 }
 
 /**

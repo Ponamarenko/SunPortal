@@ -20,6 +20,8 @@ data class LiveData(
     val p_gen: Float? = 0f,                // генератор (Вт)
     val p_smart_load: Float? = 0f,         // смарт-нагрузка (Вт)
     val grid_voltage_l1: Float? = null,    // напряжение сети, V (если API отдаёт)
+    val grid_voltage_l2: Float? = null,    // напряжение сети, V (если API отдаёт)
+    val grid_voltage_l3: Float? = null,    // напряжение сети, V (если API отдаёт)
     val battery_charge_total: Float? = null,  // Total energy charged, kW hour
     val battery_discharge_total: Float? = null,  // Total energy discharged, kW hour
     val pv1_voltage: Float = 0f,       // PV1 voltage, V
