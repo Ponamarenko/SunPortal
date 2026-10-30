@@ -331,7 +331,7 @@ fun FlowScheme(
         if (showPvTotal) {
             Text(
                 text = "☀ ${"%.1f".format(pvPower / 1000f).replace('.', ',')} кВт",
-                color = PVColor,
+                color = Color.White,
                 fontSize = 11.sp,
                 lineHeight = 12.sp,
                 fontFamily = JetBrainsMono,
@@ -521,14 +521,14 @@ private fun batteryStatusText(battPower: Float, battSoc: Float): Pair<String, Co
             val hours = remainingKwh / (battPower / 1000f)
             val hPart = hours.toInt()
             val mPart = ((hours - hPart) * 60).toInt()
-            "~${hPart}h ${mPart}m до 100%" to BatteryColor
+            "~${hPart}h ${mPart}m до 100%" to LabelGray
         }
         battPower < 0f -> {
             val remainingKwh = battSoc.coerceAtLeast(0f) / 100f * BATTERY_CAPACITY_KWH
             val hours = remainingKwh / (abs(battPower) / 1000f)
             val hPart = hours.toInt()
             val mPart = ((hours - hPart) * 60).toInt()
-            "~${hPart}h ${mPart}m до 0%" to LoadColor
+            "~${hPart}h ${mPart}m до 0%" to LabelGray
         }
         else -> "Очікування" to LabelGray
     }
