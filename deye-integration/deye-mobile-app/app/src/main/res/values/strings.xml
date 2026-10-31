@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Deye Solar Monitor</string>
+    <string name="settings">Настройки</string>
+    <string name="refresh">Обновить</string>
+    <string name="loading">Загрузка...</string>
+    <string name="error">Ошибка</string>
+    <string name="offline">Не в сети</string>
+    <string name="online">Онлайн</string>
+    <string name="connected">Подключен</string>
+    <string name="disconnected">Отключен</string>
+    
+    <!-- Main screen -->
+    <string name="main_title">Deye Solar Monitor</string>
+    <string name="inverter_status">Статус инвертора</string>
+    <string name="solar_panels">Солнечные панели</string>
+    <string name="battery">Аккумулятор</string>
+    <string name="grid_and_load">Сеть и нагрузка</string>
+    <string name="energy_stats">Энергетическая статистика</string>
+    
+    <!-- Battery parameters -->
+    <string name="battery_soc">Заряд</string>
+    <string name="battery_voltage">Напряжение</string>
+    <string name="battery_temp">Температура</string>
+    <string name="battery_power">Мощность</string>
+    
+    <!-- Solar parameters -->
+    <string name="pv1_power">PV1</string>
+    <string name="pv2_power">PV2</string>
+    <string name="pv3_power">PV3</string>
+    <string name="total_pv_power">Итого</string>
+    
+    <!-- Grid parameters -->
+    <string name="grid_voltage">Напряжение сети</string>
+    <string name="grid_frequency">Частота</string>
+    <string name="grid_power">Мощность сети</string>
+    <string name="load_power">Нагрузка</string>
+    
+    <!-- Energy stats -->
+    <string name="daily_pv_production">Дневная генерация</string>
+    <string name="total_pv_production">Всего генерация</string>
+    <string name="daily_buy_energy">Дневная покупка</string>
+    <string name="daily_sell_energy">Дневная продажа</string>
+    
+    <!-- Settings -->
+    <string name="settings_title">Настройки</string>
+    <string name="server_address">Адрес сервера</string>
+    <string name="port">Порт</string>
+    <string name="save_settings">Сохранить</string>
+    <string name="connection_settings">Настройки подключения</string>
+    
+    <!-- Status messages -->
+    <string name="connecting">Подключение...</string>
+    <string name="connection_lost">Потеряно соединение</string>
+    <string name="data_updated">Данные обновлены</string>
+    <string name="refresh_data">Обновить данные</string>
+    
+    <!-- Error messages -->
+    <string name="connection_error">Ошибка подключения</string>
+    <string name="data_error">Ошибка получения данных</string>
+    <string name="unknown_error">Неизвестная ошибка</string>
+    
+    <!-- Units -->
+    <string name="unit_watts">Вт</string>
+    <string name="unit_kilowatts">кВт</string>
+    <string name="unit_volts">В</string>
+    <string name="unit_amperes">А</string>
+    <string name="unit_celsius">°C</string>
+    <string name="unit_percent">%</string>
+    <string name="unit_kwh">кВт·ч</string>
+    <string name="unit_hz">Гц</string>
+</resources>

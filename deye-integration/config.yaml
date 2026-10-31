@@ -1,0 +1,90 @@
+# Конфигурация Deye Gateway Server
+
+# Настройки Modbus подключения
+modbus:
+  host: "192.168.1.100"  # IP адрес NA111-E конвертера
+  port: 502              # Стандартный порт Modbus TCP
+  timeout: 10           # Таймаут в секундах
+  slave_id: 1           # ID устройства инвертора
+  retry_attempts: 3      # Количество попыток повторного подключения
+  retry_delay: 5        # Задержка между попытками в секундах
+
+# Настройки HTTP сервера
+server:
+  host: "0.0.0.0"       # Слушать все интерфейсы
+  port: 8000           # HTTP порт
+  cors_origins:        # Разрешенные CORS источники
+    - "http://localhost:3000"
+    - "http://localhost:8080"
+    - "https://your-domain.com"
+  
+# Безопасность и ограничения
+safety:
+  # Ограничения на запись (защита от повреждения инвертора)
+  max_concurrent_writes: 2    # Максимум одновременных записей
+  write_cooldown: 5           # Секунд между записями
+  emergency_stop_timeout: 30  # Таймаут аварийной остановки в секундах
+  
+  # Максимальные безопасные значения
+  max_battery_charge_current: 100     # Ампер
+  max_battery_discharge_current: 100 # Ампер
+  max_solar_power_limit: 12000       # Вт
+  max_grid_power: 15000              # Вт
+  
+  # Временные окна для безопасных операций
+  safe_operation_hours:
+    start: 6   # 06:00
+    end: 22   # 22:00
+
+# Настройки логирования
+logging:
+  level: "INFO"        # DEBUG, INFO, WARNING, ERROR
+  file: "deye_gateway.log"
+  max_size: "10MB"
+  backup_count: 5
+
+# Настройки кэширования и хранения данных
+cache:
+  enable: true
+  ttl: 30              # Время жизни кэша в секундах
+  max_size: 1000       # Максимальное количество записей в кэше
+  
+# Настройки базы данных (опционально)
+database:
+  enable: false
+  type: "sqlite"       # sqlite, postgresql, mysql
+  connection_string: "sqlite:///deye_data.db"
+  
+# Настройки уведомлений
+notifications:
+  enable: true
+  email:
+    enable: false
+    smtp_server: "smtp.gmail.com"
+    smtp_port: 587
+    username: "your-email@gmail.com"
+    password: "your-app-password"
+    recipients: ["admin@example.com"]
+  
+  webhook:
+    enable: false
+    url: "https://your-webhook-endpoint.com/alert"
+    
+# Настройки Time of Use (TOU)
+tou:
+  enabled: true
+  slots: 6             # Количество временных слотов
+  default_soc: 80      # Стандартный SOC %
+  default_power_limit: 5000  # Стандартный лимит мощности Вт
+  
+# Настройки мобильного приложения
+mobile_app:
+  api_version: "v1"
+  rate_limit: 100      # Запросов в минуту
+  auth_required: true
+  
+# Настройки мониторинга
+monitoring:
+  health_check_interval: 30  # Секунд
+  performance_metrics: true
+  error_alerts: true
