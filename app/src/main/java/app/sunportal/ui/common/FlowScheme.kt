@@ -196,10 +196,10 @@ fun FlowScheme(
         val dotRadius = 1.2.dp
         val arrowSize = 0.dp // Убираем стрелки, если они не нужны для чистоты
 
-        // --- PV-ряд: 2 колонки (PV1 слева, PV2 справа) в стиле Svitgrid ---
-        // ширина колонок адаптивная — на узких экранах не вылезают за край
+        // --- PV-ряд: 3 колонки (как в Svitgrid) над батареей / инвертором / сетью ---
+        // ширины колонок адаптивные — на узких экранах (320 dp) не вылезают за край
         val pvColW = if (compact) minOf(92.dp, w * 0.26f) else minOf(104.dp, w * 0.28f)
-        val pvColXs = listOf(w * 0.25f, w * 0.75f) // PV1 слева, PV2 справа
+        val pvColXs = listOf(battX, w * 0.50f, gridX)
         val pvCaptionSize = if (compact) 8.sp else 9.sp
         val pvValueSize = if (compact) 10.sp else 11.sp
         val pvCaptionLine = if (compact) 9.sp else 10.sp
@@ -245,7 +245,7 @@ fun FlowScheme(
             val dotRadiusPx = dotRadius.toPx()        // мелкие бегущие точки
             val arrowSizePx = arrowSize.toPx()        // аккуратные стрелки у конца
 
-            // 1) PV: от каждого поля — своя линия к инвертору (под углом, к как в Svitgrid)
+            // 1) PV: от каждого поля — своя линия к инвертору (прямые линии как на шаблоне)
             pvColXs.forEach { cx ->
                 val panelBottom = px(density, cx, pvRowH)
                 val invTop = px(density, invX, invY - invSize * 0.5f + 2.dp)
@@ -326,8 +326,8 @@ fun FlowScheme(
                 textAlign = TextAlign.Center
             )
         }
-        // --- PV-ряд: 2 колонки (PV1 и PV2) ---
-        val pvStrings = listOf(d.p_string1, d.p_string2)
+        // --- PV-ряд: 3 колонки (как в Svitgrid) ---
+        val pvStrings = listOf(d.p_string1, d.p_string2, d.p_string3)
         pvColXs.forEachIndexed { i, cx ->
             Box(
                 modifier = Modifier
@@ -345,8 +345,8 @@ fun FlowScheme(
                     valueSize = pvValueSize,
                     captionLine = pvCaptionLine,
                     valueLine = pvValueLine,
-                    voltage = listOf(d.pv1_voltage, d.pv2_voltage).getOrElse(i) { 0f },
-                    current = listOf(d.pv1_current, d.pv2_current).getOrElse(i) { 0f },
+                    voltage = listOf(d.pv1_voltage, d.pv2_voltage, d.pv3_voltage).getOrElse(i) { 0f },
+                    current = listOf(d.pv1_current, d.pv2_current, d.pv3_current).getOrElse(i) { 0f },
                     onNodeClick = onNodeClick
                 )
             }
@@ -395,28 +395,71 @@ fun FlowScheme(
             )
         }
 
-        // Батарея слева
-        SchemeNode(
+        // Батарея слева — большая цилиндрическая иконка как в Svitgrid
+        Box(
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .offset(x = battX - battColW * 0.5f, y = battY - battSize * 0.5f),
-            columnWidth = battColW,
-            clickKey = "batt",
-            lottieArt = if (battPower > 0f) LottieArt.BATTERY_CHARGING else LottieArt.BATTERY,
-            lottieSize = battSize,
-            valueText = "${"%.1f".format(d.battery_voltage)} В · ${d.batt_soc.toInt()}%",
-            subText = if (battPower > 0f) "Зарядка · ${"%.0f".format(abs(battPower))} Вт" else "%.1f°C".format(d.battery_temp),
-            extraText = null,
-            smallText = null,
-            labelText = null,
-            valueSize = valueSize,
-            subSize = subSize,
-            labelSize = labelSize,
-            valueLine = valueLine,
-            subLine = subLine,
-            labelLine = labelLine,
-            color = BatteryColor
-        )
+                .offset(x = battX - battColW * 0.5f, y = battY - battSize * 0.5f)
+                .width(battColW)
+                .height(battSize),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Большая иконка батареи
+                Box(
+                    modifier = Modifier.size(battSize * 0.8f)
+                ) {
+                    LottieArtView(
+                        art = if (battPower > 0f) LottieArt.BATTERY_CHARGING else LottieArt.BATTERY,
+                        size = battSize * 0.8f,
+                        speed = if (battPower > 0f) 1.5f else 1f
+                    )
+                }
+                
+                // Уровень зарядки зеленая полоса
+                Box(
+                    modifier = Modifier
+                        .width(battSize * 0.6f)
+                        .height(8.dp)
+                        .background(Color.Gray.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .background(Color.Green, RoundedCornerShape(4.dp))
+                    )
+                }
+                
+                // Текстовая информация
+                Column(
+                    modifier = Modifier.padding(top = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "${"%.1f".format(d.battery_voltage)} В · ${d.batt_soc.toInt()}%",
+                        color = Color.White,
+                        fontSize = valueSize,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = "%.1f°C".format(d.battery_temp),
+                        color = LabelGray,
+                        fontSize = subSize,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = if (battPower > 0f) "Зарядка · ${"%.0f".format(abs(battPower))} Вт" else "Ожидание",
+                        color = LabelGray,
+                        fontSize = subSize,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
         // Сеть справа — трансформатор svitgrid (столб), при p_grid = 0: "OFF" + "Вимк."
         SchemeNode(
             modifier = Modifier
@@ -459,28 +502,59 @@ fun FlowScheme(
         }
 
         // Дом снизу (с иконкой типа домовладения)
-        SchemeNode(
+        Box(
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .offset(x = homeX - homeColW * 0.5f, y = homeNodeTop),
-            columnWidth = homeColW,
-            clickKey = "home",
-            lottieArt = houseArtFor(weatherCode, isDay, windSpeed),
-            lottieSize = homeSize,
-            valueText = "${loadPower.toInt()} Вт",
-            subText = null,
-            smallText = "Споживання",
-            labelText = null,
-            badgeRes = household.iconRes,
-            badgeSize = badgeSize,
-            valueSize = valueSize,
-            subSize = subSize,
-            labelSize = labelSize,
-            valueLine = valueLine,
-            subLine = subLine,
-            labelLine = labelLine,
-            color = LoadColor
-        )
+                .offset(x = homeX - homeColW * 0.5f, y = homeNodeTop)
+                .width(homeColW)
+                .height(homeSize + nodeTextH),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Иконка дома
+                Box(
+                    modifier = Modifier.size(homeSize)
+                ) {
+                    LottieArtView(
+                        art = houseArtFor(weatherCode, isDay, windSpeed),
+                        size = homeSize
+                    )
+                }
+                
+                // Текстовая информация под домом
+                Column(
+                    modifier = Modifier.padding(top = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "${loadPower.toInt()} Вт",
+                        color = Color.White,
+                        fontSize = valueSize,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = "Споживання",
+                        color = LabelGray,
+                        fontSize = labelSize,
+                        textAlign = TextAlign.Center
+                    )
+                    
+                    // Бейдж типа домовладения
+                    if (household.iconRes != null) {
+                        Image(
+                            painter = painterResource(household.iconRes),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(badgeSize)
+                                .padding(top = 4.dp)
+                        )
+                    }
+                }
+            }
+        }
 
         // Генератор слева-снизу (только при p_gen > 0)
         if (genPower > 0f) {
