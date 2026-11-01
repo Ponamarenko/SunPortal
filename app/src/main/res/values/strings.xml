@@ -1,10 +1,4 @@
-<<<<<<< HEAD
-<resources>
-    <string name="app_name">SunPortal</string>
-</resources>
-=======
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">SunPortal</string>
 </resources>
->>>>>>> 026e7bf (Task: Create SunPortal app with Svitgrid theme — Base structure with solar monitoring UI)
