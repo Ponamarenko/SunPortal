@@ -152,7 +152,12 @@ APK после сборки: `app\build\outputs\apk\debug\app-debug.apk`.
 
 ## ВЕРСИИ ПРИЛОЖЕНИЯ
 
-Текущая: `versionCode = 31`, `versionName = "1.0.30"` (SDK 36 / Kotlin 1.9.24).
+Текущая: `versionCode = 32`, `versionName = "1.0.31"` (SDK 36 / Kotlin 1.9.24).
+
+1.0.31 — визуальный слой возвращён к версии **1.0.17** (`FlowScheme.kt`, `Components.kt`,
+`theme/Color.kt`, `theme/Type.kt`, `LottieArt.kt` взяты из тега `v1.0.17`). Переделки схемы
+из 1.0.18–1.0.30 (3 PV-колонки, UPS-бейдж, крупная батарея, изогнутые линии) удалены —
+без явного запроса не возвращать.
 Теги/релизы: `v1.0.2`, `v1.0.3`, `v1.0.4` (Latest на GitHub).
 
 Ветка `deye-gateway` влита в `main`: приложение снова полное (10 экранов на Compose),
