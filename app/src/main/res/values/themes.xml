@@ -1,12 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.SunPortal" parent="@android:style/Theme.Light.NoTitleBar">
-        <item name="android:colorPrimary">@color/svitgrid_primary</item>
-        <item name="android:colorPrimaryDark">@color/svitgrid_primary</item>
-        <item name="android:colorAccent">@color/svitgrid_secondary</item>
-        <item name="android:windowBackground">@color/svitgrid_background</item>
-        <item name="android:colorBackground">@color/svitgrid_background</item>
-        <item name="android:colorControlNormal">@color/svitgrid_outline</item>
-        <item name="android:colorControlActivated">@color/svitgrid_primary</item>
-    </style>
+    <style name="Theme.SunPortal" parent="android:Theme.Material.Light.NoActionBar" />
 </resources>

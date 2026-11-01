@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # SunPortal
 
 Android-додаток для моніторингу сонячної станції: схема потоків енергії (PV → інвертор →
@@ -7,28 +6,50 @@ Android-додаток для моніторингу сонячної станц
 Стиль інтерфейсу — як у «Svitgrid» (Flutter): темна тема, моноширинний шрифт JetBrains Mono,
 градієнтні картки `#131A24 → #0A0D12`, анімації Lottie з оригінальних ассетів svitgrid.
 
+## Версія
+
+`versionCode = 31`, `versionName = "1.0.30"` — актуальний стан `main`.
+
 ## Стек
 
 | Частина | Версія |
 |---|---|
 | Kotlin | 1.9.24 |
 | AGP | 8.5.2 |
-| Gradle | 8.7 |
-| compileSdk / targetSdk | 34 |
+| Gradle | 8.9 |
+| compileSdk / targetSdk | 36 |
 | minSdk | 26 (Android 8.0) |
+| jvmTarget / JDK | 17 / 21 |
 | Compose BOM | 2024.06.00 |
-| Retrofit / Gson | 2.11.0 |
-| Lottie Compose | 6.4.0 |
+| Retrofit / Gson | 2.9.0 / 2.10.1 |
+| Lottie Compose | 6.1.0 |
 | DataStore Preferences | 1.1.1 |
 
-Актуальные версии тулчейна (SDK 36 / Kotlin 2.0.21 / Gradle 8.9) — в ветке
-`feat/build-sdk36-kotlin2` (PR #2), ждёт сборки на ПК.
+Для сборки нужны `platforms;android-36` и `build-tools;36.0.0` в Android SDK — без
+платформы 36 Gradle падает на `compileSdk = 36`.
+
+## Джерело даних
+
+Додаток працює з власним шлюзом `deye_gateway.py` (тека `deye-integration/`).
+Адреса за замовчуванням — `http://ha4a.pp.ua:8080/`, змінюється в
+`Налаштування → Сервер` (IP/порт).
+
+| Ендпоінт | Що віддає |
+|---|---|
+| `api/live/raw` | поточні показники: `p_sun`, стринги, `p_load`, `batt_soc`, `p_grid`, напруга/струм АКБ, температури |
+| `api/?action=history&period=day` | історія точками (крок 10 хв) для графіків |
+| `api/?action=blackout` | графік відключень, адреса, черга |
+| `weather_read.php` | погода по годинах |
+| `forecast_read.php` | прогноз виробітку на 3 дні |
+| `tou_read.php` | слоти тарифу TOU |
+
+Інвертор: **Deye SUN-12K-SG02LP1-EU-AM3** (мануал — `Deye_SUN7_12K_SG02LP1_EU_AM3_Manual_UA.pdf`).
 
 ## Сборка (Windows)
 
 ```bat
 build_now.bat                       :: assembleDebug
-build_now.bat clean assembleDebug   ;; полная пересборка
+build_now.bat clean assembleDebug   :: полная пересборка
 ```
 
 Скрипт выставляет `JAVA_HOME=C:\Users\xAnder\.jdks\jbr-21.0.11` (JDK 21).
@@ -62,6 +83,9 @@ app/src/main/java/app/sunportal/
     ├── components/   LottieArt.kt, Components.kt (SectionTitle, GlowCard, StatTile, Pill)
     ├── panels/, battery/, forecast/, charts/, tariffs/, tou/, settings/, about/
 ```
+
+`deye-integration/` — серверная часть: `deye_gateway.py`, `Dockerfile`, `config.yaml`,
+`web_interface.html`, `test_server_connection.py` и прототип `deye-mobile-app/`.
 
 ## Источники погоды
 
@@ -162,6 +186,7 @@ SOC берётся из live-данных (`LiveViewModel`, общий опро�
 - `docs/lottie-svitgrid.md` — список Lottie-ассетов и как их использовать.
 - `docs/PC-DEPENDENCIES.md` — установка зависимостей на ПК (Windows 11) и сборка/релиз.
 - `docs/PHONE-BUILD.md` — сборка без ПК: GitHub Actions (облако) и Termux (на телефоне).
+- `docs/ROADMAP.md` — план развития.
 - `AGENTS.md` — правила работы с репозиторием (git-синхронизация, сборка, релиз).
 
 ## Лицензия ассетов
@@ -170,37 +195,6 @@ Lottie-файлы в `app/src/main/assets/lottie/` и растровые ико�
 в `app/src/main/res/drawable-nodpi/svit_household_*.png` — художественная графика
 из приложения svitgrid (Flutter). Перед публикацией в Google Play нужно проверить
 лицензию оригинала.
-=======
-# Deye Mobile App
 
-Новое мобильное приложение для мониторинга инверторов Deye SUN-12K-SG02LP1-EU-AM3.
-
-## 🎯 Цели приложения
-
-1. **Real-time мониторинг** - Показатели инвертора в реальном времени
-2. **Управление параметрами** - Настройка ограничений и режимов
-3. **Исторические данные** - Графики и статистика
-4. **Уведомления** - Ошибки и важные события
-5. **Интеграция с SunPortal** - Совместимость с существующей системой
-
-## 🏗️ Технологии
-
-- **Платформа**: Kotlin + Compose (Android)
-- **Архитектура**: MVVM + Clean Architecture
-- **Сеть**: Retrofit + OkHttp
-- **Real-time**: WebSocket
-- **Хранение**: Room Database
-- **Графики**: MPAndroidChart
-
-## 📱 Основные экраны
-
-1. **Главный экран** - Основные показатели
-2. **Детали инвертора** - Подробная информация
-3. **Управление** - Настройки и управление
-4. **История** - Графики и статистика
-5. **Настройки** - Конфигурация приложения
-
-## 🚀 Разработка
-
-Приложение будет разработано с нуля с учетом современных практик и требований к производительности.
->>>>>>> 026e7bf (Task: Create SunPortal app with Svitgrid theme — Base structure with solar monitoring UI)
+> Тека `Svitgrid/` в корне (декомпилированный APK, ~162 МБ) — исходник для извлечения
+> ассетов, а не часть проекта. В сборку не входит.

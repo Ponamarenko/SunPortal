@@ -225,34 +225,34 @@ adb exec-out screencap -p > screen.png
 
 ---
 
-## 7. Влитие тулчейна (PR #2) и релиз
+## 7. Сборка и релиз
 
-PR #2 (`feat/build-sdk36-kotlin2`) поднимает тулчейн: **SDK 36 / Kotlin 2.0.21 / Gradle 8.9 / AGP 8.7.3**.
-Перед влитием убедитесь, что установлен **Android SDK Platform 36** и **Build-Tools 36.0.0**.
+Тулчейн в `main` актуален: **SDK 36 / Kotlin 1.9.24 / Gradle 8.9 / AGP 8.5.2**, JDK 21.
+Отдельного PR с тулчейном больше не нужно. Убедитесь, что установлены
+**Android SDK Platform 36** и **Build-Tools 36.0.0**.
 
 ```powershell
 git checkout main
 git pull origin main
-gh pr merge 2 --rebase
-git pull origin main
 build_now.bat clean assembleDebug
 ```
 
-Затем поднять версию в `app/build.gradle.kts`:
+Текущая версия — `versionCode = 31`, `versionName = "1.0.30"`. Перед новым релизом
+поднять в `app/build.gradle.kts`:
 
 ```kotlin
-versionCode = 5
-versionName = "1.0.4"
+versionCode = 32
+versionName = "1.0.31"
 ```
 
 И выпустить релиз:
 
 ```powershell
-gh release create v1.0.4 app\build\outputs\apk\debug\app-debug.apk `
-  --title "v1.0.4 — Svitgrid-схема и типы домовладений" `
-  --notes "PV-шина в стиле Svitgrid, иконки домовладений, тулчейн SDK 36 / Kotlin 2" `
+gh release create v1.0.31 app\build\outputs\apk\debug\app-debug.apk `
+  --title "v1.0.31 — <краткое описание>" `
+  --notes "<что изменено>" `
   --latest
-gh release view v1.0.4
+gh release view v1.0.31
 ```
 
 Ссылка на релиз: <https://github.com/Ponamarenko/SunPortal/releases>
@@ -267,7 +267,7 @@ gh release view v1.0.4
 | `SDK location not found` | нет `local.properties` / `ANDROID_HOME` | создать `local.properties` с `sdk.dir=...` (см. п. 4) |
 | `Failed to install the following SDK components as some licences have not been accepted` | не приняты лицензии SDK | `sdkmanager --licenses` → принять все |
 | `Failed to find target with hash string 'android-36'` | не установлен Platform 36 | SDK Manager → поставить Platform 36 |
-| `Unsupported compileSdk` / предупреждение AGP про compileSdk | AGP 8.5.2 не знает про 36 | влить PR #2 (AGP 8.7.3) либо добавить в `gradle.properties`: `android.suppressUnsupportedCompileSdk=36` |
+| `Unsupported compileSdk` / предупреждение AGP про compileSdk | AGP 8.5.2 не знает про 36 | предупреждение безвредно (сборка проходит); можно подавить: `android.suppressUnsupportedCompileSdk=36` в `gradle.properties` |
 | `Could not determine java version from '17.0.x'` | слишком старый JDK | JDK 21 |
 | `Gradle build daemon disappeared` / OOM | не хватает памяти | в `gradle.properties` увеличить `org.gradle.jvmargs=-Xmx4096m` |
 | `INSTALL_FAILED_UPDATE_INCOMPATIBLE` | на телефоне стоит APK с другим ключом | `adb uninstall app.sunportal` и поставить заново |

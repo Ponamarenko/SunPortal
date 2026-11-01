@@ -122,8 +122,8 @@ git status
 Инструкция по установке всех зависимостей (JDK 21, Android SDK 34/36, Build-Tools,
 Platform-Tools, Git, GitHub CLI) и сборка/релиз: `docs/PC-DEPENDENCIES.md`.
 
-Тулчейн проекта (на 1.0.4): **compileSdk/targetSdk 36**, **minSdk 26**,
-**Kotlin 2.0.21** (+ Compose compiler plugin), **AGP 8.7.3**, **Gradle 8.9**,
+Тулчейн проекта (на 1.0.30): **compileSdk/targetSdk 36**, **minSdk 26**,
+**Kotlin 1.9.24** (+ Compose compiler 1.5.5), **AGP 8.5.2**, **Gradle 8.9**,
 **jvmTarget 17**, JDK 21. Для сборки нужны `platforms;android-36` и
 `build-tools;36.0.0` в SDK — без платформы 36 Gradle падает на `compileSdk 36`.
 
@@ -133,7 +133,7 @@ Gradle не стартует из-под PowerShell без явного `JAVA_HO
 C:\Users\xAnder\AndroidProjects\SunPortal\build_now.bat
 ```
 
-Он выставляет `JAVA_HOME=C:\Users\xAnder\.jdks\jbr-21.0.11` (JDK 21, Kotlin 2.0.21)
+Он выставляет `JAVA_HOME=C:\Users\xAnder\.jdks\jbr-21.0.11` (JDK 21, Kotlin 1.9.24)
 и запускает `.\gradlew.bat --no-daemon assembleDebug`.
 
 Для `clean assembleDebug` — тот же bat с заменой задачи на `clean assembleDebug`.
@@ -152,8 +152,12 @@ APK после сборки: `app\build\outputs\apk\debug\app-debug.apk`.
 
 ## ВЕРСИИ ПРИЛОЖЕНИЯ
 
-Текущая: `versionCode = 5`, `versionName = "1.0.4"` (SDK 36 / Kotlin 2.0.21).
-Теги/релизы: `v1.0.2`, `v1.0.3`, `v1.0.4` (Latest).
+Текущая: `versionCode = 31`, `versionName = "1.0.30"` (SDK 36 / Kotlin 1.9.24).
+Теги/релизы: `v1.0.2`, `v1.0.3`, `v1.0.4` (Latest на GitHub).
+
+Ветка `deye-gateway` влита в `main`: приложение снова полное (10 экранов на Compose),
+шлюз лежит в `deye-integration/`. Упрощённая одноэкранная версия (`com.sunportal.mobile`,
+v1.0.1) из `main` удалена — не возвращать.
 Версия поднимается при каждой пересборке с новым функционалом; GitHub Release
 создаётся по тегу `vX.Y.Z`. Если релиз уже существует, APK заменяется:
 `gh release upload vX.Y.Z app\build\outputs\apk\debug\app-debug.apk --clobber`.
