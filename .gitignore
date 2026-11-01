@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 *.iml
 .gradle
 /local.properties
@@ -39,3 +40,44 @@ get_kt_sizes.bat
 
 # Дампы скриншотов (124 файла, 49 МБ) — не хранить в репозитории
 /screenshots/
+=======
+# Build outputs
+/app/build/
+*.apk
+*.dex
+*.so
+/build-logs/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local properties
+local.properties
+
+# Gradle
+.gradle/
+gradlew.bat
+gradlew
+
+# Svitgrid decompile
+_svitgrid_decompile/
+assets/svitgrid.*
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Cache
+.cache/
+*/build/
+*/.idea/
+*/.gradle/
+>>>>>>> 026e7bf (Task: Create SunPortal app with Svitgrid theme — Base structure with solar monitoring UI)
