@@ -237,22 +237,22 @@ git pull origin main
 build_now.bat clean assembleDebug
 ```
 
-Текущая версия — `versionCode = 31`, `versionName = "1.0.30"`. Перед новым релизом
+Текущая версия — `versionCode = 33`, `versionName = "1.0.32"`. Перед новым релизом
 поднять в `app/build.gradle.kts`:
 
 ```kotlin
-versionCode = 32
-versionName = "1.0.31"
+versionCode = 34
+versionName = "1.0.33"
 ```
 
 И выпустить релиз:
 
 ```powershell
-gh release create v1.0.31 app\build\outputs\apk\debug\app-debug.apk `
-  --title "v1.0.31 — <краткое описание>" `
+gh release create v1.0.33 app\build\outputs\apk\debug\app-debug.apk `
+  --title "v1.0.33 — <краткое описание>" `
   --notes "<что изменено>" `
   --latest
-gh release view v1.0.31
+gh release view v1.0.33
 ```
 
 Ссылка на релиз: <https://github.com/Ponamarenko/SunPortal/releases>
